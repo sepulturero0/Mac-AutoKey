@@ -1,0 +1,97 @@
+[0/1] Planning build
+Building for debugging...
+[0/6] Write sources
+[1/6] Write swift-version--1AB21518FC5DEDBE.txt
+[3/18] Compiling MacAutoKey KeyCatalog.swift
+[4/18] Compiling MacAutoKey MainView.swift
+[5/18] Compiling MacAutoKey DebugDiagnostics.swift
+[6/18] Compiling MacAutoKey EventEmitters.swift
+[7/18] Compiling MacAutoKey Permissions.swift
+[8/18] Compiling MacAutoKey MacAutoKeyApp.swift
+[9/18] Compiling MacAutoKey AppModel.swift
+[10/18] Compiling MacAutoKey AutomationEngines.swift
+[11/18] Emitting module MacAutoKey
+[12/18] Compiling MacAutoKey LocalVerification.swift
+[13/18] Compiling MacAutoKey GlobalHotkeyManager.swift
+[14/18] Compiling MacAutoKey Models.swift
+[15/19] Compiling MacAutoKey TargetManager.swift
+[15/20] Write Objects.LinkFileList
+[16/20] Linking MacAutoKey
+[17/20] Applying MacAutoKey
+[19/22] Compiling MacAutoKeyTests MacAutoKeyTests.swift
+[20/22] Emitting module MacAutoKeyTests
+[20/22] Write Objects.LinkFileList
+[21/22] Linking MacAutoKeyPackageTests
+Build complete! (6.43s)
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite MultipleCommandTests started.
+◇ Suite ConfigurationTests started.
+◇ Suite AutomationTests started.
+◇ Suite SessionSafetyTests started.
+◇ Suite CommandRecoveryTests started.
+◇ Suite NumericDraftTests started.
+◇ Suite NativeEventTests started.
+◇ Test persistenceRoundTrip() started.
+◇ Test duplicateAndDeleteKeepIndependentActionsAndDrafts() started.
+◇ Test rejectsReservedShortcut() started.
+◇ Test rejectedSavePreservesPreviousConfiguration() started.
+◇ Test multipleCommandsPersistAndRouteByID() started.
+◇ Test physicalMappingAndUnicodeValidation() started.
+◇ Test allDraftsMustBeValidAndRemovedActionsClearErrors() started.
+◇ Test displayWakeDoesNotUnlockInactiveSession() started.
+◇ Test oldSettingsMigrateWithoutLosingSequenceOrShortcut() started.
+◇ Test validatesBoundsDuplicatesAndSelfTriggering() started.
+◇ Test invalidDraftPreservedAndNeverSavedOrRun() started.
+◇ Test undoRestoresDeletedCommandAndItsPosition() started.
+◇ Test unicodeContainsUTF16AndEnterUsesPhysicalKey() started.
+◇ Test catchesCrossCommandDuplicatesAndGeneratedHotkeys() started.
+◇ Test undoChoosesUnusedShortcutIfOldShortcutWasReassigned() started.
+◇ Test sampleSequenceOrderAndDelays() started.
+◇ Test mousePairsUseCurrentPositionWithoutMovement() started.
+◇ Test keyPairsAndShiftAreReleased() started.
+✔ Test rejectsReservedShortcut() passed after 0.001 seconds.
+✔ Test physicalMappingAndUnicodeValidation() passed after 0.001 seconds.
+✔ Test catchesCrossCommandDuplicatesAndGeneratedHotkeys() passed after 0.001 seconds.
+✔ Test validatesBoundsDuplicatesAndSelfTriggering() passed after 0.001 seconds.
+✔ Test multipleCommandsPersistAndRouteByID() passed after 0.001 seconds.
+✔ Test oldSettingsMigrateWithoutLosingSequenceOrShortcut() passed after 0.001 seconds.
+✔ Test rejectedSavePreservesPreviousConfiguration() passed after 0.006 seconds.
+✔ Test persistenceRoundTrip() passed after 0.006 seconds.
+✔ Suite ConfigurationTests passed after 0.006 seconds.
+✔ Test duplicateAndDeleteKeepIndependentActionsAndDrafts() passed after 0.071 seconds.
+✔ Suite MultipleCommandTests passed after 0.071 seconds.
+✔ Test invalidDraftPreservedAndNeverSavedOrRun() passed after 0.157 seconds.
+✔ Test unicodeContainsUTF16AndEnterUsesPhysicalKey() passed after 0.157 seconds.
+✔ Test displayWakeDoesNotUnlockInactiveSession() passed after 0.157 seconds.
+✔ Test allDraftsMustBeValidAndRemovedActionsClearErrors() passed after 0.157 seconds.
+✔ Test undoChoosesUnusedShortcutIfOldShortcutWasReassigned() passed after 0.158 seconds.
+✔ Test undoRestoresDeletedCommandAndItsPosition() passed after 0.157 seconds.
+✔ Test mousePairsUseCurrentPositionWithoutMovement() passed after 0.157 seconds.
+✔ Test keyPairsAndShiftAreReleased() passed after 0.157 seconds.
+✔ Suite SessionSafetyTests passed after 0.158 seconds.
+✔ Suite CommandRecoveryTests passed after 0.158 seconds.
+✔ Suite NumericDraftTests passed after 0.158 seconds.
+✔ Suite NativeEventTests passed after 0.158 seconds.
+✔ Test sampleSequenceOrderAndDelays() passed after 1.818 seconds.
+◇ Test clickerIntervalDuplicateStartAndStop() started.
+✔ Test clickerIntervalDuplicateStartAndStop() passed after 0.301 seconds.
+◇ Test cancellationDuringLongDelay() started.
+✔ Test cancellationDuringLongDelay() passed after 0.090 seconds.
+◇ Test cancellationDuringTypingAndOverlapPrevention() started.
+✔ Test cancellationDuringTypingAndOverlapPrevention() passed after 0.274 seconds.
+◇ Test cancellationDuringArmingProducesNoInput() started.
+✔ Test cancellationDuringArmingProducesNoInput() passed after 0.055 seconds.
+◇ Test rapidStopRestartDoesNotOverwriteNewRun() started.
+✔ Test rapidStopRestartDoesNotOverwriteNewRun() passed after 0.104 seconds.
+◇ Test failedFocusGateStopsBeforeNextEvent() started.
+✔ Test failedFocusGateStopsBeforeNextEvent() passed after 0.131 seconds.
+◇ Test focusGateCheckedPerCharacter() started.
+✔ Test focusGateCheckedPerCharacter() passed after 0.158 seconds.
+◇ Test emitterFailureIsReported() started.
+✔ Test emitterFailureIsReported() passed after 0.055 seconds.
+◇ Test unicodeEmitsEachCharacterAndPreservesOrder() started.
+✔ Test unicodeEmitsEachCharacterAndPreservesOrder() passed after 0.157 seconds.
+✔ Suite AutomationTests passed after 3.149 seconds.
+✔ Test run with 27 tests in 7 suites passed after 3.149 seconds.

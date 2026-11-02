@@ -1,0 +1,10 @@
+{
+  "accessibilityTrusted" : true,
+  "citrix" : "NOT VERIFIED",
+  "error" : "Physical shortcut check timed out; no input was inferred.",
+  "eventPostAllowed" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "mode" : "human physical hotkey integration"
+}

@@ -1,0 +1,41 @@
+{
+  "accessibilityTrusted" : true,
+  "backgroundAfterWindowClosePassed" : true,
+  "citrix" : "NOT VERIFIED",
+  "clickCount" : 11,
+  "clickIntervalsMS" : [
+    99.260708338988479,
+    100.1052499996149,
+    108.44849999557482,
+    108.00450000533601,
+    106.17358332820004,
+    108.55570833518868,
+    107.71737500181189,
+    106.79220833117142,
+    104.02687500027241,
+    108.62658333644504
+  ],
+  "clicksStopped" : true,
+  "clickTimingPassed" : true,
+  "commonKeysPassed" : true,
+  "commonKeysText" : "ax \t\n",
+  "configurationWindowClosed" : true,
+  "delayCancellationPassed" : true,
+  "eventPostAllowed" : true,
+  "finished" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "mode" : "explicit local integration",
+  "physicalSamplePassed" : true,
+  "physicalSampleText" : "15\n10\n",
+  "realFocusLossStopped" : true,
+  "syntheticClickHotkeyActivated" : true,
+  "syntheticEmergencyStopped" : true,
+  "syntheticSequenceHotkeyActivated" : true,
+  "syntheticToggleStopped" : true,
+  "typingCancellationPassed" : true,
+  "typingCharactersBeforeStop" : 2,
+  "unicodePassed" : true,
+  "unicodeText" : "é界🙂\n"
+}

@@ -1,0 +1,14 @@
+{
+  "accessibilityTrusted" : true,
+  "automationActive" : false,
+  "automationState" : "Stopped",
+  "commandCount" : 3,
+  "configurationValid" : true,
+  "eventPostAllowed" : true,
+  "hotkeysDisabledForPreview" : true,
+  "isolatedPreviewSettings" : true,
+  "nativeFullscreen" : false,
+  "sampleSteps" : 5,
+  "windowHeight" : 760,
+  "windowWidth" : 940
+}

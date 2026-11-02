@@ -1,0 +1,12 @@
+{
+  "accessibilityTrusted" : true,
+  "automationActive" : false,
+  "commandCount" : 3,
+  "configurationValid" : true,
+  "eventPostAllowed" : true,
+  "hotkeysDisabledForPreview" : true,
+  "isolatedPreviewSettings" : true,
+  "sampleSteps" : 5,
+  "windowHeight" : 592,
+  "windowWidth" : 650
+}

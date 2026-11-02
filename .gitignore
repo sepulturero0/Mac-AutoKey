@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+.DS_Store
+xcuserdata/
+*.xcuserstate
+dist/*
+!dist/.gitkeep
+.impeccable/design.json
+docs/evidence/*.receiver.json
+docs/evidence/*.focus-target.json
+docs/evidence/*.ready
+docs/evidence/*.sb-*
