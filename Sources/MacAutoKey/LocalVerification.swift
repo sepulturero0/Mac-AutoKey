@@ -6,16 +6,16 @@ import CoreGraphics
 @MainActor
 enum LocalVerification {
     private static var started = false
-    static func runIfRequested(model: AppModel) {
+    static func runIfRequested(model: AppModel, statusItem: ClickerStatusItem) {
         let args = ProcessInfo.processInfo.arguments
         guard !started, let index = args.firstIndex(of: "--verify-local-input"), args.indices.contains(index + 2) else { return }
         started = true
         let fixtureURL = URL(fileURLWithPath: args[index + 1]).resolvingSymlinksInPath()
         let reportURL = URL(fileURLWithPath: args[index + 2])
-        Task { await run(model: model, fixtureURL: fixtureURL, reportURL: reportURL) }
+        Task { await run(model: model, statusItem: statusItem, fixtureURL: fixtureURL, reportURL: reportURL) }
     }
 
-    private static func run(model: AppModel, fixtureURL: URL, reportURL: URL) async {
+    private static func run(model: AppModel, statusItem: ClickerStatusItem, fixtureURL: URL, reportURL: URL) async {
         var report: [String: Any] = ["mode": "explicit local integration", "citrix": "NOT VERIFIED"]
         let receiverOutput = reportURL.deletingPathExtension().appendingPathExtension("receiver.json")
         var receiver: NSRunningApplication?
@@ -290,18 +290,23 @@ enum LocalVerification {
             report["clickIntervalsMS"] = intervals
             report["clickTimingPassed"] = times.count >= 5 && intervals.allSatisfy { (80...250).contains($0) }
 
-            model.toggleClicker()
-            try await AutomationTiming.sleep(ms: 180)
-            model.pauseActive()
+            statusItem.performClick()
+            let clickWasArming = model.clicker.state == .arming
+            try await AutomationTiming.sleep(ms: 3_350)
+            let startedCount = try result()["clicks"] as? Int ?? 0
+            let clickerStartedFromButton = model.clicker.state == .running && startedCount > stoppedCount
+            statusItem.performClick()
             let clickWasPaused = model.clicker.state == .paused
             try await AutomationTiming.sleep(ms: 100) // let already-posted Quartz events drain
             let pausedCount = try result()["clicks"] as? Int ?? 0
             try await AutomationTiming.sleep(ms: 220)
             let stayedPaused = (try result()["clicks"] as? Int) == pausedCount
-            model.resumeActive()
-            try await AutomationTiming.sleep(ms: 220)
+            statusItem.performClick()
+            let resumeWasPending = model.resumePending
+            try await AutomationTiming.sleep(ms: 3_350)
             let resumedCount = try result()["clicks"] as? Int ?? 0
             report["clickPauseResumePassed"] = clickWasPaused && stayedPaused && resumedCount > pausedCount && model.clicker.state == .running
+            report["statusButtonPassed"] = clickWasArming && clickerStartedFromButton && resumeWasPending
             model.stopAll()
 
             model.toggleClicker()

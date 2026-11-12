@@ -25,6 +25,16 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "FA5ED51596C80E546D05AE57";
 		};
+		"A0E34AB82D45AC7A36AA7F9B" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "Sources/MacAutoKey/ClickerStatusItem.swift";
+			"sourceTree" = "<group>";
+		};
+		"9E684885A0D84DE9DE0548AD" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A0E34AB82D45AC7A36AA7F9B";
+		};
 		"7AECE57E3C84BA5AD78B17D0" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -141,6 +151,7 @@
 			"children" = (
 				"21B33D44DCA93AB959713592",
 				"FA5ED51596C80E546D05AE57",
+				"A0E34AB82D45AC7A36AA7F9B",
 				"7AECE57E3C84BA5AD78B17D0",
 				"AF2AE7235AD5D0BFA4456FC3",
 				"3B9FDDEF8B0BF253311B1AD5",
@@ -300,6 +311,7 @@
 			"files" = (
 				"F6D23482EC3435309D71830A",
 				"3DD31134740BE07ECF0CB690",
+				"9E684885A0D84DE9DE0548AD",
 				"77268EB3692829DE258935A7",
 				"98870B22B61068028440B813",
 				"E49E45921C599AD503340337",

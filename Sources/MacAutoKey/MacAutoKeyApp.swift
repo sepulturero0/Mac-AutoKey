@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var model: AppModel?
+    private var statusItem: ClickerStatusItem?
+    var openWindow: OpenWindowAction?
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let model = Self.model {
             let args = ProcessInfo.processInfo.arguments
@@ -20,7 +22,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     try? data.write(to: URL(fileURLWithPath: args[index + 1]), options: .atomic)
                 }
                 NSApp.terminate(nil)
-            } else { LocalVerification.runIfRequested(model: model) }
+            } else {
+                let statusItem = ClickerStatusItem(model: model) { [weak self] id in
+                    self?.openWindow?(id: id)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                self.statusItem = statusItem
+                LocalVerification.runIfRequested(model: model, statusItem: statusItem)
+            }
         }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -79,13 +88,7 @@ struct MacAutoKeyApp: App {
     }
     var body: some Scene {
         Window("Mac AutoKey", id: "main") {
-            MainView(model: model)
-                .onAppear {
-                    LocalVerification.runIfRequested(model: model)
-                    #if DEBUG
-                    DebugDiagnostics.captureIfRequested(model: model)
-                    #endif
-                }
+            MainWindowContent(model: model, delegate: delegate)
         }
         .defaultSize(width: 940, height: 760)
         .windowResizability(.contentMinSize)
@@ -98,51 +101,21 @@ struct MacAutoKeyApp: App {
         Window("Settings", id: "settings") {
             AppSettingsView(model: model)
         }.windowResizability(.contentSize)
-        MenuBarExtra {
-            MenuContents(model: model)
-        } label: {
-            StatusItemLabel(model: model)
-        }
     }
 }
 
-private struct StatusItemLabel: View {
+private struct MainWindowContent: View {
     @ObservedObject var model: AppModel
+    let delegate: AppDelegate
     @Environment(\.openWindow) private var openWindow
-    @State private var didPresentWindow = false
     var body: some View {
-        Label {
-            Text("Mac AutoKey · \(model.automationState.statusTitle)")
-        } icon: {
-            Image(systemName: model.isPaused ? "pause.circle.fill" : (model.isActive ? "play.circle.fill" : "stop.circle.fill"))
-                .renderingMode(.original).foregroundStyle(model.automationState.statusColor)
-        }
+        MainView(model: model)
             .onAppear {
-                guard !didPresentWindow else { return }
-                didPresentWindow = true
-                openWindow(id: "main")
-                // The status item is created even if macOS restored a closed window.
-                LocalVerification.runIfRequested(model: model)
+                delegate.openWindow = openWindow
+                #if DEBUG
+                DebugDiagnostics.captureIfRequested(model: model)
+                #endif
             }
-    }
-}
-
-private struct MenuContents: View {
-    @ObservedObject var model: AppModel
-    @Environment(\.openWindow) private var openWindow
-    var body: some View {
-        Button("Open Mac AutoKey") {
-            openWindow(id: "main")
-            NSApp.activate(ignoringOtherApps: true)
-        }
-        Text("\(model.automationState.statusTitle) · \(model.summary)")
-        Button(model.isPaused ? "Resume" : "Pause") {
-            if model.isPaused { model.resumeActive() } else { model.pauseActive() }
-        }.disabled(model.resumePending || (!model.isPaused && !model.canPause))
-        Divider()
-        Button("Stop All    ⌘⇧Escape") { model.stopAll() }
-        Divider()
-        Button("Quit Mac AutoKey") { model.shutdown(); NSApp.terminate(nil) }
     }
 }
 

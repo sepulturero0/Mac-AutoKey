@@ -256,7 +256,7 @@ struct NativeEventTests {
     @Test func mousePairsUseCurrentPositionWithoutMovement() throws {
         var events: [CGEvent] = []
         var point = CGPoint(x: 123, y: 456)
-        let emitter = NativeEventEmitter(deliver: { events.append($0) }, pointer: { point })
+        let emitter = NativeEventEmitter(deliver: { events.append($0) }, pointer: { point }, allowsPointerClick: { _ in true })
         try emitter.click()
         point = CGPoint(x: 234, y: 567)
         try emitter.click()
@@ -264,6 +264,18 @@ struct NativeEventTests {
         #expect(events.map(\.location) == [CGPoint(x: 123, y: 456), CGPoint(x: 123, y: 456), point, point])
         #expect(events.allSatisfy { $0.getIntegerValueField(.eventSourceUserData) == NativeEventEmitter.eventTag })
         #expect(events.allSatisfy { $0.flags.isEmpty })
+    }
+    @Test func pointerClicksCannotActivateTheMenuBar() throws {
+        let display = CGDisplayBounds(CGMainDisplayID())
+        try #require(!display.isEmpty && NSScreen.screens.first != nil)
+        var point = CGPoint(x: display.midX, y: display.minY + 1)
+        var events: [CGEvent] = []
+        let emitter = NativeEventEmitter(deliver: { events.append($0) }, pointer: { point })
+        try emitter.click()
+        #expect(events.isEmpty)
+        point.y = display.midY
+        try emitter.click()
+        #expect(events.map(\.type) == [.leftMouseDown, .leftMouseUp])
     }
     @Test func keyPairsAndShiftAreReleased() throws {
         var events: [CGEvent] = []

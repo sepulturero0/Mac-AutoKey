@@ -35,6 +35,7 @@ final class AppModel: ObservableObject {
     @Published private var numericDrafts: [NumericField: String] = [:]
     private var numericErrors: [NumericField: String] = [:]
     private var automationRegistrationValid = true
+    var statusMenuIsOpen = false
     // Used only by the explicit local verification launcher to constrain its fixture.
     var additionalSafetyCheck: (() throws -> Void)?
     var verificationHotkeyObserver: ((HotkeyRole) -> Void)?
@@ -349,8 +350,22 @@ final class AppModel: ObservableObject {
             let point = config.fixedClickEnabled ? CGPoint(x: config.fixedClickX, y: config.fixedClickY) : nil
             clicker.start(intervalMS: config.clickIntervalMS, fixedPosition: point,
                           targetPID: { [weak self] in self?.runTargetPID }, manual: manual,
+                          shouldClick: { [weak self] in self?.statusMenuIsOpen == false },
                           prepare: checks.prepare, safety: checks.safety)
         } catch { lastFailure = error.localizedDescription; notice = error.localizedDescription }
+    }
+    func pressClickerStatusButton() {
+        guard !keyboard.state.isActive else { return }
+        if resumePending {
+            cancelPendingResume()
+            notice = "Resume cancelled. Auto Clicker is still paused."
+            return
+        }
+        switch clicker.state {
+        case .running: pauseActive()
+        case .paused: resumeActive(manual: true)
+        default: toggleClicker(manual: true)
+        }
     }
     private func hideConfigurationForManualRun() {
         // Restore the app underneath the configuration window before the countdown.

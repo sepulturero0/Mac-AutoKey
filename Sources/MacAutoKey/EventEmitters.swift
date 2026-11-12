@@ -20,16 +20,19 @@ final class NativeEventEmitter: InputEmitting {
     private let source = CGEventSource(stateID: .privateState)
     private let deliver: (CGEvent) -> Void
     private let pointer: () -> CGPoint?
+    private let allowsPointerClick: (CGPoint) -> Bool
     private let deliverToPID: (CGEvent, pid_t) -> Void
     private let resolveTargetWindow: (CGPoint, pid_t) throws -> ClickTargetWindow
     static let eventTag: Int64 = 0x4D414B4559
 
     init(deliver: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) },
          pointer: @escaping () -> CGPoint? = { CGEvent(source: nil)?.location },
+         allowsPointerClick: @escaping (CGPoint) -> Bool = { NativeEventEmitter.isOutsideMenuBar($0) },
          deliverToPID: @escaping (CGEvent, pid_t) -> Void = { $0.postToPid($1) },
          resolveTargetWindow: @escaping (CGPoint, pid_t) throws -> ClickTargetWindow = NativeEventEmitter.windowAtClickPosition) {
         self.deliver = deliver
         self.pointer = pointer
+        self.allowsPointerClick = allowsPointerClick
         self.deliverToPID = deliverToPID
         self.resolveTargetWindow = resolveTargetWindow
     }
@@ -41,7 +44,20 @@ final class NativeEventEmitter: InputEmitting {
     }
     func click() throws {
         guard let location = pointer() else { throw AutoKeyError.message("macOS could not read the pointer position.") }
+        guard allowsPointerClick(location) else { return }
         try clickPair(at: location, targetPID: nil, window: nil)
+    }
+    private static func isOutsideMenuBar(_ location: CGPoint) -> Bool {
+        let screens = NSScreen.screens
+        guard let primary = screens.first else { return false }
+        let point = CGPoint(x: location.x, y: primary.frame.maxY - location.y)
+        let menuBarHeight = NSStatusBar.system.thickness
+        return !screens.contains { screen in
+            let height = max(menuBarHeight, screen.safeAreaInsets.top)
+            let menuBar = CGRect(x: screen.frame.minX, y: screen.frame.maxY - height,
+                                 width: screen.frame.width, height: height + 1)
+            return menuBar.contains(point)
+        }
     }
     func click(at point: CGPoint, targetPID: pid_t) throws {
         guard targetPID > 0, point.x.isFinite, point.y.isFinite else {

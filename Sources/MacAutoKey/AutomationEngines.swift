@@ -49,6 +49,7 @@ final class AutoClickerEngine {
     init(emitter: any InputEmitting) { self.emitter = emitter }
 
     func start(intervalMS: Int, fixedPosition: CGPoint? = nil, targetPID: @escaping () -> pid_t? = { nil }, manual: Bool = false,
+               shouldClick: @escaping () -> Bool = { true },
                prepare: @escaping () throws -> Void = {}, safety: @escaping () throws -> Void) {
         guard !state.isActive else { return }
         guard (30...60_000).contains(intervalMS) else { state = .failed("Invalid click interval."); return }
@@ -68,10 +69,12 @@ final class AutoClickerEngine {
                 while true {
                     try await control.waitIfPaused()
                     try safety()
-                    if let fixedPosition {
-                        guard let pid = targetPID() else { throw AutoKeyError.message("The fixed click target is unavailable.") }
-                        try self.emitter.click(at: fixedPosition, targetPID: pid)
-                    } else { try self.emitter.click() }
+                    if shouldClick() {
+                        if let fixedPosition {
+                            guard let pid = targetPID() else { throw AutoKeyError.message("The fixed click target is unavailable.") }
+                            try self.emitter.click(at: fixedPosition, targetPID: pid)
+                        } else { try self.emitter.click() }
+                    }
                     // Sleep from the last click. Never catch up in bursts after a stall.
                     try await control.sleep(ms: intervalMS)
                 }

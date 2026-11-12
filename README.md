@@ -4,7 +4,7 @@ A native macOS 14+ menu bar utility for repeated left clicks and editable keyboa
 
 ## Download
 
-Download **[Mac AutoKey v1.5.0 for Apple Silicon and Intel](https://github.com/sepulturero0/Mac-AutoKey/releases/download/v1.5.0/Mac-AutoKey-universal.zip)**, extract the ZIP, and move **Mac AutoKey.app** to Applications. See the [release notes](https://github.com/sepulturero0/Mac-AutoKey/releases/tag/v1.5.0) for installation, checksums, and compatibility details.
+Download **[Mac AutoKey for Apple Silicon and Intel](https://github.com/sepulturero0/Mac-AutoKey/releases/latest/download/Mac-AutoKey-universal.zip)**, extract the ZIP, and move **Mac AutoKey.app** to Applications. See the [latest release notes](https://github.com/sepulturero0/Mac-AutoKey/releases/latest) for installation, checksums, and compatibility details.
 
 The app is locally ad hoc signed and is not Developer ID signed or notarized. macOS may require approval in **System Settings → Privacy & Security → Open Anyway** after the first launch attempt. Enable Mac AutoKey under **Privacy & Security → Accessibility** to allow input automation. Never disable Gatekeeper globally.
 
@@ -132,9 +132,11 @@ Commands are always visible in the sidebar. Select a command, edit its name and 
 
 ## Status indicator and pause / resume (1.3)
 
-The window header, command sidebar, and menu bar show the current state with text as well as color: **green Running**, **amber Paused**, **gray Stopped**, **blue Starting**, and **red Error**. A completed keyboard command returns to Stopped; its sequence does not repeat automatically.
+The window header and command sidebar show the current state with text as well as color: **green Running**, **amber Paused**, **gray Stopped**, **blue Starting**, and **red Error**. The Auto Clicker menu bar icon shows a **green play symbol** while running and a **red pause symbol** while paused. A completed keyboard command returns to Stopped; its sequence does not repeat automatically.
 
-To pause without switching away from your target, open Mac AutoKey’s menu bar menu and choose **Pause**. Choose **Resume** there to continue. A paused run sends no new input and freezes the remaining key/click/step delay; resuming continues at the same character/step. The main window also provides Resume, with three seconds to refocus the original target. Resume is blocked in a different application. You may inspect the configuration window while paused, but editing settings ends that run; locking/sleeping the session also stops it. Stop All, quitting, and the clicker’s existing toggle shortcut still end the run and cannot be resumed. Already-posted system events cannot be retracted.
+Click the menu bar icon to start, pause, or resume Auto Clicker. Start and Resume give you three seconds to return the pointer to the target. Click again during the countdown to cancel it. Pointer-following clicks are skipped while the pointer is over the menu bar. Right-click or Control-click the icon for **Open Mac AutoKey**, **Settings**, **Pause / Resume**, and **Stop All**.
+
+A paused run sends no new input and freezes the remaining key/click/step delay; resuming continues at the same character/step. Resume is blocked in a different application. You may inspect the configuration window while paused, but editing settings ends that run; locking/sleeping the session also stops it. Stop All, quitting, and the clicker’s existing toggle shortcut still end the run and cannot be resumed. Already-posted system events cannot be retracted.
 
 ## Fullscreen layout (1.4)
 
