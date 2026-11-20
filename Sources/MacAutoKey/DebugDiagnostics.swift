@@ -38,6 +38,11 @@ enum DebugDiagnostics {
             }
             // Allow SwiftUI to lay out after resizing before capturing evidence.
             try? await Task.sleep(for: .milliseconds(350))
+            if args.contains("--preview-waiting") {
+                // Start after the isolated form has settled. Constant false can never emit input.
+                model.clicker.start(intervalMS: 60_000, imageCondition: { false }, safety: {})
+                try? await Task.sleep(for: .milliseconds(150))
+            }
             var captureError: String?
             do {
                 if #available(macOS 14.4, *) {

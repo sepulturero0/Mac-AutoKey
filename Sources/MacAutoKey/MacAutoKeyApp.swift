@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     "appPath": Bundle.main.bundlePath,
                     "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
                     "accessibilityTrusted": model.permissions.trusted, "eventPostAllowed": model.permissions.canPost,
+                    "screenCaptureAllowed": model.permissions.canCaptureScreen,
                     "clickerShortcut": model.config.clickShortcut.label,
                     "commandCount": model.config.commands.count, "citrixOnly": model.config.citrixOnly
                 ]
@@ -57,6 +58,11 @@ struct MacAutoKeyApp: App {
                 let defaults = UserDefaults(suiteName: "MacAutoKey.UIPreview")!
                 defaults.removePersistentDomain(forName: "MacAutoKey.UIPreview")
                 var preview = Configuration()
+                let args = ProcessInfo.processInfo.arguments
+                if let index = args.firstIndex(of: "--image-condition-preview"), args.indices.contains(index + 1),
+                   let data = try? Data(contentsOf: URL(fileURLWithPath: args[index + 1])) {
+                    preview.imageCondition = .init(enabled: true, reference: try? ImageReference.load(data: data, name: "Reference image.png"))
+                }
                 if ProcessInfo.processInfo.arguments.contains("--fixed-position-preview") {
                     preview.fixedClickEnabled = true
                     preview.fixedClickX = 640

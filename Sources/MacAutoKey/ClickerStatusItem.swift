@@ -38,25 +38,36 @@ final class ClickerStatusItem: NSObject {
     private func refresh() {
         guard let button = item.button else { return }
         let state = model.automationState
-        let image: NSImage? = switch state {
-        case .running: Self.runningIcon
-        case .paused: model.clicker.state == .paused ? Self.clickerPausedIcon : Self.keyboardPausedIcon
-        case .arming: Self.startingIcon
-        case .failed: Self.errorIcon
-        default: Self.readyIcon
+        let image: NSImage?
+        if model.config.imageCondition.enabled && model.clicker.state.isActive {
+            image = switch state {
+            case .paused: Self.imagePausedIcon
+            case .waitingForImage, .arming: Self.imageWaitingIcon
+            default: Self.imagePlayingIcon
+            }
+        } else {
+            image = switch state {
+            case .running: Self.runningIcon
+            case .paused: model.clicker.state == .paused ? Self.clickerPausedIcon : Self.keyboardPausedIcon
+            case .arming: Self.startingIcon
+            case .waitingForImage: Self.waitingIcon
+            case .waitingForImageDelay: Self.startingIcon
+            case .failed: Self.errorIcon
+            default: Self.readyIcon
+            }
         }
         let action: String = if model.keyboard.state.isActive {
             "Keyboard command active"
         } else {
             switch state {
-            case .running: "Click to pause"
+            case .running, .waitingForImage, .waitingForImageDelay: "Click to pause"
             case .paused: "Click to resume"
             case .arming: "Click to cancel"
             default: "Click to start Auto Clicker"
             }
         }
         let label = "Mac AutoKey: \(state.statusTitle). \(action). Right-click for options."
-        button.image = image
+        if button.image !== image { button.image = image }
         button.toolTip = model.lastFailure.map { "\(label) \($0)" } ?? label
         button.setAccessibilityLabel(label)
     }
@@ -107,6 +118,10 @@ final class ClickerStatusItem: NSObject {
     private static let clickerPausedIcon = coloredIcon("pause.circle.fill", .red)
     private static let keyboardPausedIcon = coloredIcon("pause.circle.fill", .orange)
     private static let startingIcon = coloredIcon("clock.fill", .blue)
+    private static let waitingIcon = coloredIcon("eye.circle", .blue)
+    private static let imagePlayingIcon = coloredIcon("eye.circle.fill", .green)
+    private static let imagePausedIcon = coloredIcon("eye.circle.fill", .orange)
+    private static let imageWaitingIcon = coloredIcon("eye.circle.fill", .blue)
     private static let errorIcon = coloredIcon("exclamationmark.circle.fill", .red)
 
     private static func coloredIcon(_ symbol: String, _ color: Color) -> NSImage? {

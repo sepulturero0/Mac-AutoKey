@@ -59,6 +59,29 @@ struct AutomationTests {
         #expect(engine.state == .stopped)
     }
 
+    @Test(arguments: [500, 1_000, 5_000], [false, true])
+    func imageConditionOffHonorsInterval(intervalMS: Int, fixedPosition: Bool) async throws {
+        let emitter = RecordingEmitter()
+        let engine = AutoClickerEngine(emitter: emitter)
+        defer { engine.stop() }
+        let settings = ImageConditionSettings(enabled: false)
+        let condition: (() async throws -> Bool)? = settings.enabled ? { false } : nil
+        let point = CGPoint(x: 120, y: 180)
+        engine.start(intervalMS: intervalMS, fixedPosition: fixedPosition ? point : nil,
+                     targetPID: { 42 }, imageCondition: condition, imageAppearanceDelayMS: 5_000, safety: {})
+        let deadline = ContinuousClock.now.advanced(by: .milliseconds(intervalMS * 2 + 3_000))
+        while emitter.times.count < 3, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        engine.stop()
+        try #require(emitter.times.count == 3)
+        let expected: RecordingEmitter.Event = fixedPosition ? .fixedClick(point, 42) : .click
+        #expect(emitter.events.allSatisfy { $0 == expected })
+        for (earlier, later) in zip(emitter.times, emitter.times.dropFirst()) {
+            #expect(earlier.duration(to: later) >= .milliseconds(intervalMS))
+        }
+    }
+
     @Test func cancellationDuringLongDelay() async throws {
         let emitter = RecordingEmitter()
         let engine = KeyboardAutomationEngine(emitter: emitter)
@@ -416,6 +439,22 @@ struct NumericDraftTests {
         let model = AppModel(store: store, registerGlobalHotkeys: false)
         defer { model.shutdown() }
         try body(model, store)
+    }
+    @Test func unchangedFieldWritesKeepRunActiveButEditsAndInvalidDraftsStopIt() throws {
+        try withModel { model, _ in
+            // Synchronous test: the task is stopped before it can emit input.
+            model.clicker.start(intervalMS: 60_000, imageCondition: { false }, safety: {})
+            model.setNumberText(model.numberText(.clickInterval), field: .clickInterval)
+            #expect(model.clicker.state.isActive)
+            let unchanged = model.config
+            model.config = unchanged
+            #expect(model.clicker.state.isActive)
+            model.setNumberText("250", field: .clickInterval)
+            #expect(model.clicker.state == .stopped)
+            model.clicker.start(intervalMS: 60_000, imageCondition: { false }, safety: {})
+            model.setNumberText("", field: .clickInterval)
+            #expect(model.clicker.state == .stopped)
+        }
     }
     @Test func invalidDraftPreservedAndNeverSavedOrRun() throws {
         try withModel { model, store in

@@ -1,0 +1,13 @@
+{
+  "accessibilityTrusted": true,
+  "appPath": "<local-build>/dist/Mac AutoKey.app",
+  "citrixOnly": false,
+  "clickerShortcut": "⌥F6",
+  "commandCount": 3,
+  "eventPostAllowed": true,
+  "screenCaptureAllowed": true,
+  "version": "1.6.0",
+  "redactions": [
+    "Local home-directory path removed for public distribution."
+  ]
+}

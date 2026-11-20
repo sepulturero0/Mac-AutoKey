@@ -16,14 +16,18 @@ final class AppModel: ObservableObject {
     @Published private var deletedCommand: (command: KeyboardCommand, index: Int)?
     var canUndoCommandDeletion: Bool { deletedCommand != nil }
     private var runTargetPID: pid_t?
+    private var clickerTargetPID: pid_t?
     private var resumeTask: Task<Void, Never>?
     private var resumeGeneration = UUID()
     @Published private(set) var resumePending = false
     @Published private(set) var activeCommandID: UUID?
     @Published private(set) var capturePending = false
     @Published private(set) var positionCaptureSeconds: Int?
+    @Published private(set) var referenceCapturePending = false
+    private var referencePicker: ScreenRegionPicker?
     let permissions = PermissionManager()
     let targets = TargetManager()
+    let imageConditionMonitor = ImageConditionMonitor()
     let clicker: AutoClickerEngine
     let keyboard: KeyboardAutomationEngine
     private let store: ConfigurationStore
@@ -67,23 +71,37 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             // Workspace can announce activation of the same application more than
             // once. Only a real target change or unavailable session cancels a run.
-            if self.isActive && (!self.targets.sessionAvailable ||
-                ((self.clicker.state == .running || self.keyboard.state == .running) && self.runTargetPID != nil && NSWorkspace.shared.frontmostApplication?.processIdentifier != self.runTargetPID)) {
+            let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            let keyboardLostFocus = self.keyboard.state == .running && self.runTargetPID != nil && frontmostPID != self.runTargetPID
+            let clickerLostFocus = self.clicker.state.isActive && self.clickerTargetPID != nil && frontmostPID != self.clickerTargetPID
+            if self.isActive && !self.targets.sessionAvailable {
+                self.stopAll(message: "Stopped: target lost focus or the session became unavailable.")
+            } else if keyboardLostFocus {
+                if self.clicker.isImageConditionRun {
+                    self.keyboard.stop()
+                    self.notice = "Keyboard sequence stopped after focus changed. Image monitoring continues."
+                } else {
+                    self.stopAll(message: "Stopped: target lost focus or the session became unavailable.")
+                }
+            } else if clickerLostFocus && !self.clicker.isImageConditionRun {
                 self.stopAll(message: "Stopped: target lost focus or the session became unavailable.")
             }
             self.permissions.refresh()
         }
         permissions.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &observers)
         targets.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &observers)
+        imageConditionMonitor.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &observers)
         hotkeyWarnings = registerGlobalHotkeys ? hotkeys.register(config: config) : []
         ready = true
     }
     private func engineChanged(state: RunState) {
         if case let .failed(message) = state { lastFailure = message }
         if !isActive {
-            runTargetPID = nil
+            imageConditionMonitor.reset()
             if resumePending { cancelPendingResume() }
         }
+        if !keyboard.state.isActive { runTargetPID = nil }
+        if !clicker.state.isActive { clickerTargetPID = nil }
         objectWillChange.send()
     }
     func dismissFailure() { lastFailure = nil }
@@ -130,7 +148,7 @@ final class AppModel: ObservableObject {
     }
     var isActive: Bool { clicker.state.isActive || keyboard.state.isActive }
     var isPaused: Bool { clicker.state == .paused || keyboard.state == .paused }
-    var canPause: Bool { clicker.state == .running || keyboard.state == .running }
+    var canPause: Bool { clicker.state == .running || clicker.state == .waitingForImage || clicker.state == .waitingForImageDelay || keyboard.state == .running }
     var activeRunTitle: String {
         clicker.state.isActive ? (config.fixedClickEnabled ? "Auto Clicker · X \(config.fixedClickX), Y \(config.fixedClickY)" : "Auto Clicker") : (activeCommandName ?? "Keyboard command")
     }
@@ -147,6 +165,8 @@ final class AppModel: ObservableObject {
         if isPaused { return "\(activeRunTitle) paused" }
         if clicker.state == .arming || keyboard.state == .arming { return "Preparing — focus your target" }
         if clicker.state == .running { return "Auto Clicker running" }
+        if clicker.state == .waitingForImageDelay { return "Reference image found; waiting before clicking" }
+        if clicker.state == .waitingForImage { return "Waiting for the reference image in the target window" }
         if keyboard.state == .running { return "\(activeCommandName ?? "Keyboard command") · step \(keyboard.currentStep)" }
         if lastFailure != nil || configurationError != nil { return "Needs attention" }
         if keyboard.state == .completed { return "Command completed" }
@@ -170,7 +190,9 @@ final class AppModel: ObservableObject {
             }
             if removed { numericDrafts.removeValue(forKey: field); numericErrors.removeValue(forKey: field) }
         }
-        if isActive { stopAll(message: "Stopped because settings changed.") }
+        if isActive && (config != old || !numericErrors.isEmpty) {
+            stopAll(message: "Stopped because settings changed.")
+        }
         do {
             if let error = numericErrors.values.sorted().first { throw AutoKeyError.message(error) }
             try store.save(config)
@@ -196,12 +218,15 @@ final class AppModel: ObservableObject {
         if configurationError == nil, registerGlobalHotkeys { hotkeyWarnings = hotkeys.register(config: config) }
     }
     func stopAll(message: String = "Stopped all automation.") {
+        referencePicker?.cancel()
+        imageConditionMonitor.reset()
         cancelPositionCapture()
         lastFailure = nil
         cancelPendingResume()
         clicker.stop()
         keyboard.stop()
         runTargetPID = nil
+        clickerTargetPID = nil
         notice = message
     }
     private func cancelPendingResume() {
@@ -244,10 +269,16 @@ final class AppModel: ObservableObject {
         guard isPaused else { return }
         do {
             try preflight()
-            guard let pid = runTargetPID else { throw AutoKeyError.message("The original target is no longer available. Stop and start a new run.") }
-            try targets.requireFocus(pid: pid, config: config)
+            if keyboard.state.isActive {
+                guard let pid = runTargetPID else { throw AutoKeyError.message("The original target is no longer available. Stop and start a new run.") }
+                try targets.requireFocus(pid: pid, config: config)
+            } else if clicker.state.isActive {
+                guard clickerTargetPID != nil else { throw AutoKeyError.message("The original target is no longer available. Stop and start a new run.") }
+                if !clicker.isImageConditionRun, let pid = clickerTargetPID { try targets.requireFocus(pid: pid, config: config) }
+            }
             try additionalSafetyCheck?()
             lastFailure = nil
+            if keyboard.state.isActive { imageConditionMonitor.reset() }
             clicker.resume()
             keyboard.resume()
             notice = "Resumed in the original target."
@@ -266,6 +297,7 @@ final class AppModel: ObservableObject {
     }
     #endif
     private func preflight() throws {
+        guard !referenceCapturePending else { throw AutoKeyError.message("Finish or cancel the reference capture before starting automation.") }
         guard positionCaptureSeconds == nil else { throw AutoKeyError.message("Finish or cancel Pick Position before starting automation.") }
         if let configurationError { throw AutoKeyError.message(configurationError) }
         try config.validate()
@@ -275,6 +307,7 @@ final class AppModel: ObservableObject {
         if let draft = numericDrafts[field] { return draft }
         switch field {
         case .clickInterval: return String(config.clickIntervalMS)
+        case .imageAppearanceDelay: return String(config.imageCondition.appearanceDelayMS)
         case .fixedClickX: return String(config.fixedClickX)
         case .fixedClickY: return String(config.fixedClickY)
         case .keystrokeDelay: return String(config.keystrokeDelayMS)
@@ -294,6 +327,7 @@ final class AppModel: ObservableObject {
         var updated = config
         switch field {
         case .clickInterval: updated.clickIntervalMS = number
+        case .imageAppearanceDelay: updated.imageCondition.appearanceDelayMS = number
         case .fixedClickX: updated.fixedClickX = number
         case .fixedClickY: updated.fixedClickY = number
         case .keystrokeDelay: updated.keystrokeDelayMS = number
@@ -310,7 +344,8 @@ final class AppModel: ObservableObject {
         else { configurationChanged(from: config) }
     }
     // A separate PID is captured per run. Even two allowed apps may not inherit a run.
-    private func guards(for snapshot: Configuration, expectedPID: pid_t?) -> (prepare: () throws -> Void, safety: () throws -> Void) {
+    private func guards(for snapshot: Configuration, expectedPID: pid_t?, allowFocusLoss: Bool = false,
+                        allowPhysicalModifiers: Bool = false, assignTarget: ((pid_t) -> Void)? = nil) -> (prepare: () throws -> Void, safety: () throws -> Void) {
         var pid: pid_t?
         let prepare: () throws -> Void = { [weak self] in
             guard let self else { throw CancellationError() }
@@ -320,15 +355,15 @@ final class AppModel: ObservableObject {
                 throw AutoKeyError.message("Target changed while releasing the shortcut. Focus your target and try again.")
             }
             pid = current
-            self.runTargetPID = current
+            if let assignTarget { assignTarget(current) } else { self.runTargetPID = current }
             self.notice = "Sending input to \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "the focused application")."
         }
         let safety: () throws -> Void = { [weak self] in
             guard let self, let pid else { throw CancellationError() }
             try self.permissions.requireAccess()
-            try self.targets.requireFocus(pid: pid, config: snapshot)
+            if !allowFocusLoss { try self.targets.requireFocus(pid: pid, config: snapshot) }
             try self.additionalSafetyCheck?()
-            if AutomationTiming.physicalModifiersHeld {
+            if !allowPhysicalModifiers && AutomationTiming.physicalModifiersHeld {
                 throw AutoKeyError.message("Stopped because a modifier key was pressed. Release the keys and run again.")
             }
         }
@@ -339,18 +374,37 @@ final class AppModel: ObservableObject {
         guard config.clickerEnabled else { notice = "Enable Auto Clicker first."; return }
         do {
             try preflight()
+            let conditionSettings = config.imageCondition
+            if conditionSettings.enabled {
+                guard conditionSettings.reference != nil else { throw AutoKeyError.message("Choose a reference image before starting the Auto Clicker.") }
+                guard permissions.canCaptureScreen else { throw AutoKeyError.message("Allow Screen Recording in the Image condition section before starting.") }
+            }
             cancelPendingResume()
             keyboard.stop()
+            imageConditionMonitor.reset()
             let expectedPID = manual ? nil : try targets.currentPID(config: config)
             runTargetPID = nil
+            clickerTargetPID = nil
             lastFailure = nil
             lastTrigger = "Auto Clicker · \(manual ? "manual start" : config.clickShortcut.label)"
-            let checks = guards(for: config, expectedPID: expectedPID)
+            let checks = guards(for: config, expectedPID: expectedPID,
+                                allowFocusLoss: conditionSettings.enabled,
+                                allowPhysicalModifiers: conditionSettings.enabled,
+                                assignTarget: { [weak self] in self?.clickerTargetPID = $0 })
             if manual { hideConfigurationForManualRun() }
             let point = config.fixedClickEnabled ? CGPoint(x: config.fixedClickX, y: config.fixedClickY) : nil
+            let condition: (() async throws -> Bool)? = conditionSettings.enabled ? { [weak self] in
+                guard let self, let pid = self.clickerTargetPID else { throw CancellationError() }
+                return try await self.imageConditionMonitor.matches(conditionSettings, targetPID: pid)
+            } : nil
             clicker.start(intervalMS: config.clickIntervalMS, fixedPosition: point,
-                          targetPID: { [weak self] in self?.runTargetPID }, manual: manual,
-                          shouldClick: { [weak self] in self?.statusMenuIsOpen == false },
+                          targetPID: { [weak self] in self?.clickerTargetPID }, manual: manual,
+                          shouldClick: { [weak self] in
+                              guard let self, self.statusMenuIsOpen == false, !self.keyboard.state.isActive else { return false }
+                              guard conditionSettings.enabled else { return true }
+                              return NSWorkspace.shared.frontmostApplication?.processIdentifier == self.clickerTargetPID
+                          },
+                          imageCondition: condition, imageAppearanceDelayMS: conditionSettings.appearanceDelayMS,
                           prepare: checks.prepare, safety: checks.safety)
         } catch { lastFailure = error.localizedDescription; notice = error.localizedDescription }
     }
@@ -362,9 +416,58 @@ final class AppModel: ObservableObject {
             return
         }
         switch clicker.state {
-        case .running: pauseActive()
+        case .running, .waitingForImage, .waitingForImageDelay: pauseActive()
         case .paused: resumeActive(manual: true)
         default: toggleClicker(manual: true)
+        }
+    }
+    func chooseConditionImage() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a cropped screenshot of the image or screen state to wait for."
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                    guard size <= 20_000_000 else { throw AutoKeyError.message("Choose a cropped image under 20 MB.") }
+                    let reference = try ImageReference.load(data: Data(contentsOf: url), name: url.lastPathComponent)
+                    self.config.imageCondition.reference = reference
+                    self.lastFailure = nil
+                } catch { self.lastFailure = error.localizedDescription }
+            }
+        }
+    }
+    func captureConditionArea() {
+        guard !referenceCapturePending else { return }
+        permissions.refresh()
+        guard permissions.canCaptureScreen else {
+            lastFailure = "Allow Screen Recording in Image condition before capturing an area."
+            return
+        }
+        stopAll()
+        referenceCapturePending = true
+        let picker = ScreenRegionPicker()
+        referencePicker = picker
+        picker.begin { [weak self] result in
+            guard let self else { return }
+            self.referenceCapturePending = false
+            self.referencePicker = nil
+            NSApp.unhide(nil)
+            NSApp.windows.first(where: { $0.title == "Mac AutoKey" })?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            switch result {
+            case .success(let reference):
+                if let reference {
+                    self.config.imageCondition.reference = reference
+                    self.lastFailure = nil
+                    self.notice = "Screen area captured. Press Start when you are ready."
+                } else { self.notice = "Capture cancelled. Your previous reference image was kept." }
+            case .failure(let error): self.lastFailure = error.localizedDescription
+            }
         }
     }
     private func hideConfigurationForManualRun() {
@@ -388,9 +491,9 @@ final class AppModel: ObservableObject {
             try preflight()
             guard !command.actions.isEmpty else { throw AutoKeyError.message("Add at least one sequence action.") }
             cancelPendingResume()
-            clicker.stop()
+            if !clicker.isImageConditionRun { clicker.stop() }
             let expectedPID = manual ? nil : try targets.currentPID(config: config)
-            runTargetPID = nil
+            if !clicker.isImageConditionRun { runTargetPID = nil }
             lastFailure = nil
             activeCommandName = command.name
             activeCommandID = command.id

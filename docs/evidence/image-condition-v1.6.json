@@ -1,0 +1,19 @@
+{
+  "accessibilityTrusted" : true,
+  "citrix" : "NOT VERIFIED",
+  "eventPostAllowed" : true,
+  "finished" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "imageAppearsStartsPassed" : true,
+  "imageCannotOverridePausePassed" : true,
+  "imageCannotOverrideStopPassed" : true,
+  "imageConditionIncluded" : true,
+  "imageDisappearsStopsPassed" : true,
+  "imageInitiallyWaitsPassed" : true,
+  "imageManualResumePassed" : true,
+  "imageMatchedSimilarity" : 0.93647058823529417,
+  "imageReturnsResumesPassed" : true,
+  "mode" : "image condition integration"
+}

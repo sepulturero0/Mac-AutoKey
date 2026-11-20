@@ -1,0 +1,25 @@
+{
+  "accessibilityTrusted" : true,
+  "citrix" : "NOT VERIFIED",
+  "eventPostAllowed" : true,
+  "finished" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "markerRect" : [
+    700,
+    388,
+    112,
+    84
+  ],
+  "mode" : "screen crop integration",
+  "screenCropCancelPreservedPassed" : true,
+  "screenCropDidNotClickPassed" : true,
+  "screenCropDimensions" : [
+    112,
+    84
+  ],
+  "screenCropMatchesPassed" : true,
+  "screenCropSavedPassed" : true,
+  "screenCropSimilarity" : 0.95112368024132732
+}

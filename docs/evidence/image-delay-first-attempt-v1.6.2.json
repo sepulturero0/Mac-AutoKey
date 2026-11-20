@@ -1,0 +1,13 @@
+{
+  "accessibilityTrusted" : true,
+  "citrix" : "NOT VERIFIED",
+  "error" : "Image test stopped: Verification stopped: pointer left the harmless click counter.",
+  "eventPostAllowed" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "imageConditionIncluded" : true,
+  "imageDelayIncluded" : true,
+  "imageInitiallyWaitsPassed" : false,
+  "mode" : "image condition integration"
+}

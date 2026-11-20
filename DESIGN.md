@@ -35,3 +35,15 @@ The workspace is centered and bounded at 1,240 pt for Keyboard Commands and 940 
 ## Version 1.5 fixed click position
 
 Auto Clicker places Fixed click position immediately below its introduction. The native switch defaults off, preserving pointer-following clicks. Enabled mode exposes labeled X/Y integer fields and Pick Position (3s), which captures coordinates without clicking; its countdown can be cancelled. Coordinates are global screen points, with a top-left origin on the main display and signed values for other displays. The run bar names the saved position. All settings autosave. Changing settings, changing applications, or losing the target stops the run. The pointer stays free; there is no cursor hiding, locking, warping, or restore jump in this mode. Clicker content scrolls in shorter windows while the run bar stays visible.
+
+## Image condition (1.6)
+
+An optional, compact Image condition group precedes click-position settings. When enabled it reveals a reference preview/name, Choose Image/Remove, similarity slider, and inline Screen Recording onboarding. Start explains missing image/permission prerequisites. The active waiting state uses a blue eye icon and a labeled Waiting for image indicator; green means the image condition matches and clicking can proceed, and manual clicker pause is orange in the menu bar. Waiting is an armed active state and can be paused/stopped by existing controls. Help explicitly explains automatic image-based waiting/resumption, manual Pause/Stop precedence, local processing, and approximate sampling latency. Existing fullscreen width bounds and scrollable clicker layout remain.
+
+Direct capture (1.6.1): Capture Area is the primary reference action; Import Image remains secondary. Hide the configuration before capture, show a frozen screen with crosshair selection, and restore the configuration with a reference preview after release. Escape or right-click preserves the previous reference. No file-save dialog is required.
+
+Image appearance delay (1.6.2): keep the initial wait inside Image condition and separate from Time between clicks. A labeled milliseconds field and a 2 seconds preset explain the behavior. Waiting to click uses a blue clock status; green remains reserved for active clicking.
+
+Image-condition menu icon (1.6.7): keep the eye symbol while color shows state: blue while the image is absent, green as soon as it matches (including appearance delay and clicking), and orange during manual Pause. The window and tooltip retain their detailed states.
+
+Keep image monitoring across app and keyboard focus changes (1.6.4): an armed image-conditioned clicker keeps watching its original target when another app is activated or modifier keys are pressed. It sends clicks only while that original target is frontmost; other apps are never clicked by the background run. If the target window leaves the visible screen list, treat the image as absent and wait for it to return. With Image condition off, the existing focus-loss stop remains.

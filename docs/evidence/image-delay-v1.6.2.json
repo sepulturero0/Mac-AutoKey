@@ -1,0 +1,24 @@
+{
+  "accessibilityTrusted" : true,
+  "citrix" : "NOT VERIFIED",
+  "eventPostAllowed" : true,
+  "finished" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "imageAppearsStartsPassed" : true,
+  "imageCannotOverridePausePassed" : true,
+  "imageCannotOverrideStopPassed" : true,
+  "imageConditionIncluded" : true,
+  "imageDelayBlocksEarlyClickPassed" : true,
+  "imageDelayDisappearanceCancelsPassed" : true,
+  "imageDelayFirstClickMS" : 1095.3018333384534,
+  "imageDelayIncluded" : true,
+  "imageDelayRestartsPassed" : true,
+  "imageDisappearsStopsPassed" : true,
+  "imageInitiallyWaitsPassed" : true,
+  "imageManualResumePassed" : true,
+  "imageMatchedSimilarity" : 0.93647058823529417,
+  "imageReturnsResumesPassed" : true,
+  "mode" : "image condition integration"
+}

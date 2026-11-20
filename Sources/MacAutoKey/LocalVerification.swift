@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ImageIO
 
 /// Explicit development test command. In ordinary launches this does nothing.
 /// It targets only a newly launched copy of our disposable AppKit input receiver.
@@ -18,6 +19,8 @@ enum LocalVerification {
     private static func run(model: AppModel, statusItem: ClickerStatusItem, fixtureURL: URL, reportURL: URL) async {
         var report: [String: Any] = ["mode": "explicit local integration", "citrix": "NOT VERIFIED"]
         let receiverOutput = reportURL.deletingPathExtension().appendingPathExtension("receiver.json")
+        let markerImageURL = reportURL.deletingPathExtension().appendingPathExtension("marker.png")
+        let markerControlURL = reportURL.deletingPathExtension().appendingPathExtension("marker-state")
         var receiver: NSRunningApplication?
         var observedHotkeys: [HotkeyRole: Int] = [:]
         model.verificationHotkeyObserver = { observedHotkeys[$0, default: 0] += 1 }
@@ -47,20 +50,21 @@ enum LocalVerification {
             model.config = Configuration()
             report["hotkeyRegistrationWarnings"] = model.hotkeyWarnings
 
-            func launch(clickMode: Bool = false) async throws -> NSRunningApplication {
+            func launch(clickMode: Bool = false, imageMode: Bool = false) async throws -> NSRunningApplication {
                 receiver?.terminate()
                 try await AutomationTiming.sleep(ms: 300)
                 let launch = NSWorkspace.OpenConfiguration()
                 launch.createsNewApplicationInstance = true
                 launch.activates = true
                 launch.arguments = [receiverOutput.path] + (clickMode ? ["--click-test"] : [])
+                    + (imageMode ? ["--image-reference", markerImageURL.path, markerControlURL.path] : [])
                     + (ProcessInfo.processInfo.arguments.contains("--physical-hotkeys") ? ["--physical-check"] : [])
                 let app = try await NSWorkspace.shared.openApplication(at: fixtureURL, configuration: launch)
                 receiver = app
                 try await AutomationTiming.sleep(ms: 600)
                 guard app.bundleIdentifier == "com.macautokey.inputreceiver",
                       app.bundleURL?.resolvingSymlinksInPath() == fixtureURL,
-                      NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier,
+                      (NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier || ProcessInfo.processInfo.arguments.contains("--verify-screen-crop-only")),
                       let metadata = TargetManager.metadata(app) else {
                     throw AutoKeyError.message("Disposable test receiver did not become the focused target.")
                 }
@@ -166,6 +170,156 @@ enum LocalVerification {
                     guard ContinuousClock.now < deadline else { throw AutoKeyError.message("Physical shortcut check timed out; no input was inferred.") }
                     try await AutomationTiming.sleep(ms: 50)
                 }
+            }
+            func prepareMarker() throws -> Data {
+                let context = CGContext(data: nil, width: 112, height: 84, bitsPerComponent: 8, bytesPerRow: 448,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                context.setFillColor(CGColor(red: 0.1, green: 0.6, blue: 0.9, alpha: 1))
+                context.fill(CGRect(x: 0, y: 0, width: 112, height: 84))
+                context.setFillColor(CGColor(red: 0.95, green: 0.2, blue: 0.1, alpha: 1))
+                context.fill(CGRect(x: 16, y: 14, width: 28, height: 56))
+                context.setFillColor(CGColor(gray: 0.95, alpha: 1))
+                context.fillEllipse(in: CGRect(x: 56, y: 20, width: 38, height: 42))
+                context.setFillColor(CGColor(gray: 0.05, alpha: 1))
+                context.fill(CGRect(x: 56, y: 28, width: 16, height: 18))
+                let data = NSBitmapImageRep(cgImage: context.makeImage()!).representation(using: .png, properties: [:])!
+                try data.write(to: markerImageURL)
+                return data
+            }
+            func verifyImageCondition() async throws {
+                report["imageConditionIncluded"] = true
+                guard model.permissions.canCaptureScreen else { throw AutoKeyError.message("Screen Recording permission is needed for the image-condition live test.") }
+                let data = try prepareMarker()
+                func marker(_ visible: Bool) throws { try Data((visible ? "visible" : "hidden").utf8).write(to: markerControlURL, options: .atomic) }
+                try marker(false)
+                let app = try await launch(clickMode: true, imageMode: true)
+                try constrainClicks(to: app)
+                let verifyDelay = ProcessInfo.processInfo.arguments.contains("--verify-image-delay")
+                model.config.imageCondition = .init(enabled: true, reference: try ImageReference.load(data: data, name: "Test marker"), appearanceDelayMS: verifyDelay ? 700 : 0)
+                report["imageDelayIncluded"] = verifyDelay
+                if verifyDelay {
+                    let rect = try result()["clickRect"] as? [Double] ?? []
+                    guard rect.count == 4 else { throw AutoKeyError.message("Missing delay-test counter bounds.") }
+                    model.config.fixedClickEnabled = true
+                    model.config.fixedClickX = Int(rect[0] + rect[2] / 2)
+                    model.config.fixedClickY = Int(rect[1] + rect[3] / 2)
+                    model.additionalSafetyCheck = {
+                        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else {
+                            throw AutoKeyError.message("Delay verification left its disposable target.")
+                        }
+                    }
+                }
+                try await AutomationTiming.sleep(ms: 400)
+                model.toggleClicker()
+                try await AutomationTiming.sleep(ms: 900)
+                let initiallyEmpty = try result()["clicks"] as? Int ?? -1
+                report["imageInitiallyWaitsPassed"] = model.clicker.state == .waitingForImage && initiallyEmpty == 0
+                func waitFor(_ state: RunState) async throws {
+                    let deadline = ContinuousClock.now.advanced(by: .seconds(8))
+                    while model.clicker.state != state, ContinuousClock.now < deadline {
+                        if !model.clicker.state.isActive { throw AutoKeyError.message("Image test stopped: \(model.clicker.state.label); \(model.notice)") }
+                        try await AutomationTiming.sleep(ms: 50)
+                    }
+                    guard model.clicker.state == state else { throw AutoKeyError.message("Image test did not reach \(state.label); score \(model.imageConditionMonitor.similarity ?? -1)") }
+                }
+                try marker(true)
+                if verifyDelay {
+                    try await waitFor(.waitingForImageDelay)
+                    report["imageDelayBlocksEarlyClickPassed"] = (try result()["clicks"] as? Int) == 0
+                    try marker(false)
+                    try await waitFor(.waitingForImage)
+                    try await AutomationTiming.sleep(ms: 800)
+                    report["imageDelayDisappearanceCancelsPassed"] = (try result()["clicks"] as? Int) == 0
+                    let appeared = ProcessInfo.processInfo.systemUptime
+                    try marker(true)
+                    try await waitFor(.running)
+                    try await AutomationTiming.sleep(ms: 150)
+                    let times = try result()["clickTimes"] as? [Double] ?? []
+                    report["imageDelayFirstClickMS"] = times.first.map { ($0 - appeared) * 1000 }
+                    report["imageDelayRestartsPassed"] = times.first.map { $0 - appeared >= 0.7 } ?? false
+                }
+                try await waitFor(.running)
+                try await AutomationTiming.sleep(ms: 400)
+                let presentCount = try result()["clicks"] as? Int ?? 0
+                report["imageAppearsStartsPassed"] = presentCount > 0
+                report["imageMatchedSimilarity"] = model.imageConditionMonitor.similarity
+                try marker(false)
+                try await waitFor(.waitingForImage)
+                try await AutomationTiming.sleep(ms: 150)
+                let stoppedCount = try result()["clicks"] as? Int ?? -1
+                try await AutomationTiming.sleep(ms: 450)
+                let afterMissing = try result()["clicks"] as? Int ?? -2
+                report["imageDisappearsStopsPassed"] = stoppedCount == afterMissing && model.clicker.state == .waitingForImage
+                try marker(true)
+                try await waitFor(.running)
+                try await AutomationTiming.sleep(ms: 350)
+                let returnedCount = try result()["clicks"] as? Int ?? 0
+                report["imageReturnsResumesPassed"] = returnedCount > afterMissing
+                model.pauseActive()
+                try await AutomationTiming.sleep(ms: 150)
+                let pausedCount = try result()["clicks"] as? Int ?? -1
+                try marker(false)
+                try await AutomationTiming.sleep(ms: 350)
+                try marker(true)
+                try await AutomationTiming.sleep(ms: 450)
+                let afterPause = try result()["clicks"] as? Int ?? -2
+                report["imageCannotOverridePausePassed"] = model.isPaused && afterPause == pausedCount
+                model.resumeActive()
+                try await waitFor(.running)
+                try await AutomationTiming.sleep(ms: 350)
+                let resumedCount = try result()["clicks"] as? Int ?? 0
+                report["imageManualResumePassed"] = resumedCount > pausedCount
+                model.stopAll()
+                try await AutomationTiming.sleep(ms: 150)
+                let finalCount = try result()["clicks"] as? Int ?? -1
+                try await AutomationTiming.sleep(ms: 450)
+                let afterStop = try result()["clicks"] as? Int ?? -2
+                report["imageCannotOverrideStopPassed"] = !model.isActive && afterStop == finalCount
+                model.config.imageCondition.enabled = false
+                model.additionalSafetyCheck = nil
+            }
+            if ProcessInfo.processInfo.arguments.contains("--verify-screen-crop-only") {
+                report["mode"] = "screen crop integration"
+                let data = try prepareMarker()
+                try Data("visible".utf8).write(to: markerControlURL, options: .atomic)
+                _ = try await launch(clickMode: true, imageMode: true)
+                try await AutomationTiming.sleep(ms: 200)
+                report["markerRect"] = try result()["markerRect"]
+                func capture(_ stage: String) async throws {
+                    model.captureConditionArea()
+                    let ready: [String: Any] = ["stage": stage, "markerRect": try result()["markerRect"] ?? []]
+                    try JSONSerialization.data(withJSONObject: ready).write(to: reportURL.appendingPathExtension("ready"), options: .atomic)
+                    let deadline = ContinuousClock.now.advanced(by: .seconds(120))
+                    while model.referenceCapturePending, ContinuousClock.now < deadline {
+                        try await AutomationTiming.sleep(ms: 50)
+                    }
+                    guard !model.referenceCapturePending else { throw AutoKeyError.message("Screen crop gesture timed out.") }
+                }
+                try await capture("drag")
+                guard let reference = model.config.imageCondition.reference else {
+                    throw AutoKeyError.message("No reference after crop: \(model.lastFailure ?? model.notice)")
+                }
+                report["screenCropDimensions"] = [reference.widthPoints, reference.heightPoints]
+                try reference.png.write(to: reportURL.appendingPathExtension("crop.png"))
+                report["screenCropSavedPassed"] = reference.widthPoints == 112 && reference.heightPoints == 84
+                let source = CGImageSourceCreateWithData(data as CFData, nil)!
+                let original = CGImageSourceCreateImageAtIndex(source, 0, nil)!
+                let score = try await ImageMatcher().similarity(frame: original, widthPoints: 112, reference: reference)
+                report["screenCropSimilarity"] = score
+                report["screenCropMatchesPassed"] = score >= 0.92
+                try await AutomationTiming.sleep(ms: 300)
+                try await capture("cancel")
+                report["screenCropCancelPreservedPassed"] = model.config.imageCondition.reference == reference
+                let cropClickCount = try result()["clicks"] as? Int
+                report["screenCropDidNotClickPassed"] = !model.isActive && cropClickCount == 0
+                report["finished"] = true
+                return
+            }
+            if ProcessInfo.processInfo.arguments.contains("--verify-image-condition-only") {
+                report["mode"] = "image condition integration"
+                try await verifyImageCondition()
+                report["finished"] = true
+                return
             }
             if ProcessInfo.processInfo.arguments.contains("--verify-fixed-position-only") {
                 try await verifyFixedPosition()
@@ -394,6 +548,7 @@ enum LocalVerification {
             let finalText = try result()["text"] as? String ?? ""
             report["typingCancellationPassed"] = !stoppedText.isEmpty && stoppedText == finalText && finalText.count < 100
             report["typingCharactersBeforeStop"] = finalText.count
+            if ProcessInfo.processInfo.arguments.contains("--verify-image-condition") { try await verifyImageCondition() }
             report["finished"] = true
         } catch { report["error"] = error.localizedDescription }
     }

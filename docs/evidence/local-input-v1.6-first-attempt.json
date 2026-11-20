@@ -1,0 +1,321 @@
+{
+  "accessibilityTrusted" : true,
+  "backgroundAfterWindowClosePassed" : true,
+  "citrix" : "NOT VERIFIED",
+  "clickCount" : 13,
+  "clickIntervalsMS" : [
+    107.21649999322835,
+    108.42750000301749,
+    112.37808332953136,
+    110.54612501175143,
+    108.51954166719224,
+    108.48354165500496,
+    110.33537500770763,
+    105.41399999056011,
+    108.26320834166836,
+    109.58970832871273,
+    110.92375000589527,
+    106.62012499233242
+  ],
+  "clickPauseResumePassed" : true,
+  "clicksStopped" : true,
+  "clickTimingPassed" : true,
+  "commandCount" : 2,
+  "commonKeysPassed" : true,
+  "commonKeysText" : "ax \t\n",
+  "configurationWindowClosed" : true,
+  "delayCancellationPassed" : true,
+  "error" : "Image test stopped: Stopped",
+  "eventPostAllowed" : true,
+  "fixedPositionCapturePassed" : true,
+  "fixedPositionClickPassed" : true,
+  "fixedPositionClicks" : 7,
+  "fixedPositionNotice" : "Fixed click position saved: X 755, Y 254.",
+  "fixedPositionOffDisplayBlockedPassed" : true,
+  "fixedPositionPauseStopPassed" : true,
+  "fixedPositionPoint" : [
+    755,
+    254
+  ],
+  "fixedPositionPointerUnmovedPassed" : true,
+  "fixedPositionReceivedEvents" : [
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 1,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    },
+    {
+      "eventWindowFrame" : [
+        446,
+        372,
+        620,
+        472
+      ],
+      "globalPoint" : [
+        309,
+        116
+      ],
+      "type" : 2,
+      "window" : 2160,
+      "windowPoint" : [
+        309,
+        356
+      ]
+    }
+  ],
+  "fixedPositionState" : "Running",
+  "fixedPositionWrongTargetBlockedPassed" : true,
+  "hotkeyRegistrationWarnings" : [
+
+  ],
+  "imageConditionIncluded" : true,
+  "imageInitiallyWaitsPassed" : false,
+  "independentCommandHotkeyPassed" : true,
+  "keyboardPauseResumePassed" : true,
+  "manualStartRestoresTargetPassed" : true,
+  "mode" : "explicit local integration",
+  "pausedResumeRejectsWrongTargetPassed" : true,
+  "physicalSamplePassed" : true,
+  "physicalSampleText" : "15\n10\n",
+  "realFocusLossStopped" : true,
+  "sameTargetNotificationContinuesPassed" : true,
+  "statusButtonPassed" : true,
+  "stopWhilePausedPassed" : true,
+  "syntheticClickHotkeyActivated" : true,
+  "syntheticEmergencyStopped" : true,
+  "syntheticSequenceHotkeyActivated" : true,
+  "syntheticToggleStopped" : true,
+  "typingCancellationPassed" : true,
+  "typingCharactersBeforeStop" : 3,
+  "unicodePassed" : true,
+  "unicodeText" : "é界🙂\n"
+}

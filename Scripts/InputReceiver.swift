@@ -10,6 +10,8 @@ final class InputReceiver: NSObject, NSApplicationDelegate, NSTextViewDelegate {
     var clicks = 0
     var timestamps: [Double] = []
     var mouseEvents: [[String: Any]] = []
+    var marker: NSImageView?
+    var markerTimer: Timer?
     let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "/tmp/MacAutoKey-input-receiver.json")
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 440),
@@ -50,6 +52,22 @@ final class InputReceiver: NSObject, NSApplicationDelegate, NSTextViewDelegate {
         text.setAccessibilityIdentifier("test-editor")
         scroll.documentView = text
         content.addSubview(scroll)
+        if let index = CommandLine.arguments.firstIndex(of: "--image-reference"), CommandLine.arguments.indices.contains(index + 2) {
+            let image = NSImageView(frame: NSRect(x: 254, y: 138, width: 112, height: 84))
+            image.image = NSImage(contentsOfFile: CommandLine.arguments[index + 1])
+            image.imageScaling = .scaleProportionallyUpOrDown
+            image.isHidden = true
+            content.addSubview(image)
+            marker = image
+            let controlURL = URL(fileURLWithPath: CommandLine.arguments[index + 2])
+            markerTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let visible = (try? String(contentsOf: controlURL, encoding: .utf8)) == "visible"
+                    if self.marker?.isHidden != !visible { self.marker?.isHidden = !visible; self.writeResult() }
+                }
+            }
+        }
         let menu = NSMenu()
         let item = NSMenuItem()
         let submenu = NSMenu()
@@ -88,9 +106,14 @@ final class InputReceiver: NSObject, NSApplicationDelegate, NSTextViewDelegate {
     func writeResult() {
         let rectangle = window.convertToScreen(counter.convert(counter.bounds, to: nil))
         let mainHeight = NSScreen.screens.first?.frame.height ?? 0
-        let result: [String: Any] = ["clicks": clicks, "clickTimes": timestamps, "text": text.string, "mouseEvents": mouseEvents,
+        var result: [String: Any] = ["clicks": clicks, "clickTimes": timestamps, "text": text.string, "mouseEvents": mouseEvents,
+            "markerVisible": marker?.isHidden == false,
             "windowNumber": window.windowNumber, "windowFrame": [window.frame.minX, window.frame.minY, window.frame.width, window.frame.height],
             "clickRect": [rectangle.minX, mainHeight - rectangle.maxY, rectangle.width, rectangle.height]]
+        if let marker {
+            let markerRect = window.convertToScreen(marker.convert(marker.bounds, to: nil))
+            result["markerRect"] = [markerRect.minX, mainHeight - markerRect.maxY, markerRect.width, markerRect.height]
+        }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: output, options: .atomic)
         }

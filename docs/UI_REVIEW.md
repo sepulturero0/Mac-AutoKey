@@ -45,3 +45,19 @@ Scoped self-review of native fullscreen Keyboard Commands (dark), native fullscr
 ## Version 1.5 fixed click position
 
 Scoped self-review of Fixed click position enabled at the minimum content size (dark) and in native fullscreen (light), plus mode off at the default window size (light). Evidence: `.impeccable/review/fixed-position-minimum-v1.5.png`, `fixed-position-fullscreen-v1.5.png`, and `pointer-mode-v1.5.png`. The new switch appears immediately after the clicker introduction, with labeled X/Y fields, a Pick Position button, helper text, and the selected coordinates in the fixed run bar. Mode off disables its fields and picker. Content scrolls in shorter windows; the run controls stay visible. These own-window previews use isolated settings and emit no input. Model tests cover cancellation and invalid coordinate drafts, while live integration separately checks pointer-free delivery. No new independent audit, external display test, or VoiceOver session was performed.
+
+## Version 1.6 image condition
+
+Scoped native self-review inspected the enabled image condition at 860 × 650 content points (light) and Waiting for image in native fullscreen (dark). The reference preview/name, chooser, similarity threshold, local-processing explanation, waiting label, and fixed Stop control are visible without horizontal clipping. Evidence: `.impeccable/review/image-condition-min-v1.6.png` and `image-condition-waiting-v1.6.png`. The waiting fixture uses a constant-false condition and emits no input. The separate fixture integration checks the real matcher and delivered clicks. The first waiting screenshot was captured before the preview form settled and was replaced by the confirmed active waiting capture. No screen contents outside the app were captured for visual UI review.
+
+## Version 1.6.1 direct capture
+
+Scoped native review inspected the normal dark app with Image condition enabled. Capture Area and Import Image, similarity, permission status, and fixed Start/Stop controls remain visible and readable; lower click settings scroll. Capture Area opens the crosshair selection overlay with the configuration hidden. Returning from a user selection shows the reference preview, Captured screen area name, and success notice, with automation stopped. The generated-marker development run separately verified exact crop dimensions and Escape preservation. User screen/reference contents were not exported as review artifacts.
+
+## Version 1.6.2 image appearance delay
+
+Native light minimum-size preview (860 × 650 content points) shows the reference, Capture Area/Import Image, similarity, the labeled delay field, and 2 seconds preset without horizontal clipping. Extended guidance and click settings scroll beneath the fixed Start/Stop controls. Evidence: .impeccable/review/image-delay-min-v1.6.2.png/json. The preview uses isolated settings with hotkeys disabled and emits no input. A blue Waiting to click state and menu clock distinguish the configured delay from active green clicking.
+
+## Version 1.6.3 steady image-condition icon
+
+The menu-bar icon keeps the eye symbol and uses blue while the image is absent, green as soon as it matches (including the configured appearance delay), and orange during manual Pause. Resume returns to the appropriate waiting or matched color. The detailed window status and tooltip remain state-specific. The existing ClickerStatusItem refresh observer checks image identity before assignment, preventing unnecessary menu-bar image replacements during similarity updates.

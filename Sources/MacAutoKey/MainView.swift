@@ -93,8 +93,11 @@ struct MainView: View {
         }.padding(20)
     }
     private var selectedCanRun: Bool {
-        guard hasAccess, model.configurationError == nil, model.positionCaptureSeconds == nil else { return false }
-        if selectedTab == .clicker { return model.config.clickerEnabled }
+        guard hasAccess, model.configurationError == nil, model.positionCaptureSeconds == nil, !model.referenceCapturePending else { return false }
+        if selectedTab == .clicker {
+            return model.config.clickerEnabled && (!model.config.imageCondition.enabled ||
+                (model.config.imageCondition.reference != nil && model.permissions.canCaptureScreen))
+        }
         guard let command = model.selectedCommand else { return false }
         return model.config.keyboardEnabled && command.enabled && !command.actions.isEmpty
     }
@@ -106,6 +109,10 @@ struct MainView: View {
         if !hasAccess { return "Set up Accessibility to send clicks and keystrokes." }
         if model.configurationError != nil { return "Correct the highlighted setting before starting." }
         if selectedTab == .clicker, !model.config.clickerEnabled { return "Enable Auto Clicker to start." }
+        if selectedTab == .clicker, model.config.imageCondition.enabled {
+            if model.config.imageCondition.reference == nil { return "Choose a reference image in Image condition to start." }
+            if !model.permissions.canCaptureScreen { return "Allow Screen Recording in Image condition to start." }
+        }
         if selectedTab == .keyboard {
             if !model.config.keyboardEnabled { return "Enable keyboard shortcuts above the command list." }
             guard let command = model.selectedCommand else { return "Click Add Command to get started." }
@@ -120,7 +127,7 @@ struct MainView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(model.isActive ? model.activeRunTitle : (selectedTab == .clicker ? (model.config.fixedClickEnabled ? "Click at X \(model.config.fixedClickX), Y \(model.config.fixedClickY)" : "Click where you point") : (model.selectedCommand?.name ?? "Create your first command")))
                         .font(.headline).lineLimit(1)
-                    Text(model.isPaused ? "Resume continues where you paused. Focus the original target within 3 seconds." : (model.isActive ? "Pause from the menu bar · Stop All: ⌘⇧Escape" : startHelp))
+                    Text(model.clicker.state == .waitingForImageDelay ? "Image found. Waiting for the configured delay before clicking. Stop All: ⌘⇧Escape" : model.clicker.state == .waitingForImage ? "No clicks while the reference image is missing. Stop All: ⌘⇧Escape" : (model.isPaused ? "Resume continues where you paused. Focus the original target within 3 seconds." : (model.isActive ? "Pause from the menu bar · Stop All: ⌘⇧Escape" : startHelp)))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
@@ -187,6 +194,7 @@ private struct ClickerView: View {
                     Spacer()
                     Toggle("Enabled", isOn: $model.config.clickerEnabled).toggleStyle(.switch).fixedSize()
                 }
+                ImageConditionView(model: model)
                 GroupBox {
                     VStack(alignment: .leading, spacing: 14) {
                         Toggle("Fixed click position", isOn: $model.config.fixedClickEnabled)
@@ -239,6 +247,86 @@ private struct ClickerView: View {
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if model.clicker.state != .idle { StateLabel(state: model.clicker.state) }
             }.padding(24).frame(maxWidth: 740, alignment: .leading).frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct ImageConditionView: View {
+    @ObservedObject var model: AppModel
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 14) {
+                Toggle("Image condition", isOn: $model.config.imageCondition.enabled)
+                    .toggleStyle(.switch).font(.headline)
+                Text("Only click while a reference image is visible in the focused target window.")
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if model.config.imageCondition.enabled {
+                    HStack(alignment: .center, spacing: 14) {
+                        if let reference = model.config.imageCondition.reference, let preview = NSImage(data: reference.png) {
+                            Image(nsImage: preview).resizable().scaledToFit().frame(width: 100, height: 68)
+                                .accessibilityLabel("Reference image preview")
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(reference.name).lineLimit(2)
+                                Button("Remove Image", role: .destructive) { model.config.imageCondition.reference = nil }.controlSize(.small)
+                            }
+                        } else {
+                            Label("No reference image selected", systemImage: "photo").foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                    }
+                    HStack {
+                        Button("Capture Area…", systemImage: "viewfinder") { model.captureConditionArea() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(model.referenceCapturePending || !model.permissions.canCaptureScreen)
+                        Button("Import Image…", systemImage: "folder") { model.chooseConditionImage() }
+                            .disabled(model.referenceCapturePending)
+                        Spacer()
+                    }
+                    Text("Capture Area hides this window so you can drag a crop directly on any screen. Release to save the reference; Esc cancels. Keep the same appearance and zoom.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Text("Similarity")
+                        Slider(value: $model.config.imageCondition.minimumSimilarity, in: 0.80...0.99, step: 0.01)
+                            .accessibilityLabel("Minimum image similarity")
+                        Text(model.config.imageCondition.minimumSimilarity, format: .percent.precision(.fractionLength(0)))
+                            .monospacedDigit().frame(width: 40)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Delay after image appears").font(.callout.weight(.medium))
+                        HStack {
+                            NumericInput(model: model, field: .imageAppearanceDelay).frame(width: 110)
+                            Text("milliseconds").foregroundStyle(.secondary)
+                            Spacer()
+                            Button("2 seconds") { model.setNumberText("2000", field: .imageAppearanceDelay) }
+                                .controlSize(.small)
+                        }
+                        Text("0 starts clicking as soon as the image is found. The image must stay visible during this delay; if it disappears, the delay restarts when it returns. Time between clicks still applies afterward.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text("Higher similarity is stricter. After Start, missing image → wait; visible image → click; missing again → wait. Stop turns monitoring off.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if model.permissions.canCaptureScreen {
+                        Label("Screen Recording ready · matching stays on this Mac", systemImage: "checkmark.shield")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        HStack {
+                            Label("Screen Recording needed", systemImage: "lock.shield").foregroundStyle(.orange)
+                            Spacer()
+                            Button("Allow Screen Recording") { model.permissions.requestScreenAccess() }
+                        }
+                        HStack {
+                            Button("Open System Settings") { model.permissions.openScreenSettings() }
+                            Button("Check Again") { model.permissions.refresh() }
+                        }.controlSize(.small)
+                    }
+                    if model.clicker.state.isActive, let score = model.imageConditionMonitor.similarity {
+                        Text("Latest similarity: \(score.formatted(.percent.precision(.fractionLength(0)))) · \(model.clicker.state.statusTitle)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Text("Checks up to 5 times per second while active. No screenshots are saved or uploaded. Screen Recording may require reopening the app after approval.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -525,6 +613,8 @@ extension RunState {
     var statusTitle: String {
         switch self {
         case .running: "Running"
+        case .waitingForImage: "Waiting for image"
+        case .waitingForImageDelay: "Waiting to click"
         case .paused: "Paused"
         case .arming: "Starting"
         case .failed: "Error"
@@ -534,6 +624,7 @@ extension RunState {
     var statusColor: Color {
         switch self {
         case .running: .green
+        case .waitingForImage, .waitingForImageDelay: .blue
         case .paused: .orange
         case .arming: .blue
         case .failed: .red

@@ -1,0 +1,14 @@
+{
+  "mode": "native UI observation through CUA",
+  "version": "1.6.1",
+  "appPath": "dist/Mac AutoKey.app",
+  "accessReady": true,
+  "captureAreaOpenedSelectionOverlay": true,
+  "configurationWindowHiddenDuringSelection": true,
+  "referencePreviewVisibleAfterSelection": true,
+  "referenceName": "Captured screen area",
+  "notice": "Screen area captured. Press Start when you are ready.",
+  "automationState": "Stopped",
+  "referenceContentExported": false,
+  "limitation": "Normal-launch selections were user-chosen areas, not the exact generated marker; exact marker similarity and Escape preservation passed separately in the development process."
+}

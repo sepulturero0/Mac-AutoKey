@@ -1,0 +1,2 @@
+b1eae3e6c14a9eddae376cd5636313dc4c5b3d523986dbd0b48659ac732955b4  dist/Mac AutoKey.app/Contents/MacOS/MacAutoKey
+377ba06f15d68fe784bab0985359f13af226ba6b7d24a03af44a91a68b842324  dist/Mac-AutoKey-universal.zip

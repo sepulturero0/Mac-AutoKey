@@ -1,0 +1,10 @@
+{
+  "accessibilityTrusted": true,
+  "appPath": "dist/Mac AutoKey.app",
+  "citrixOnly": false,
+  "clickerShortcut": "\u2325F6",
+  "commandCount": 3,
+  "eventPostAllowed": true,
+  "screenCaptureAllowed": true,
+  "version": "1.6.1"
+}

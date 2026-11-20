@@ -2,13 +2,15 @@ import Foundation
 import CoreGraphics
 
 enum RunState: Equatable {
-    case idle, arming, running, paused, completed, stopped, failed(String)
-    var isActive: Bool { self == .arming || self == .running || self == .paused }
+    case idle, arming, running, waitingForImage, waitingForImageDelay, paused, completed, stopped, failed(String)
+    var isActive: Bool { self == .arming || self == .running || self == .waitingForImage || self == .waitingForImageDelay || self == .paused }
     var label: String {
         switch self {
         case .idle: "Ready"
         case .arming: "Starting in 3 seconds — focus your target"
         case .running: "Running"
+        case .waitingForImage: "Waiting for image"
+        case .waitingForImageDelay: "Waiting before clicking"
         case .paused: "Paused"
         case .completed: "Completed"
         case .stopped: "Stopped"
@@ -45,19 +47,24 @@ final class AutoClickerEngine {
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private var control: RunControl?
+    private(set) var usesImageCondition = false
+    var isImageConditionRun: Bool { usesImageCondition && state.isActive }
     let emitter: any InputEmitting
     init(emitter: any InputEmitting) { self.emitter = emitter }
 
     func start(intervalMS: Int, fixedPosition: CGPoint? = nil, targetPID: @escaping () -> pid_t? = { nil }, manual: Bool = false,
                shouldClick: @escaping () -> Bool = { true },
+               imageCondition: (() async throws -> Bool)? = nil, imageAppearanceDelayMS: Int = 0,
                prepare: @escaping () throws -> Void = {}, safety: @escaping () throws -> Void) {
         guard !state.isActive else { return }
         guard (30...60_000).contains(intervalMS) else { state = .failed("Invalid click interval."); return }
+        guard (0...60_000).contains(imageAppearanceDelayMS) else { state = .failed("Invalid image appearance delay."); return }
         let token = UUID()
         generation = token
         let control = RunControl()
         self.control = control
-        state = manual ? .arming : .running
+        usesImageCondition = imageCondition != nil
+        state = manual ? .arming : (usesImageCondition ? .waitingForImage : .running)
         task = Task { [weak self] in
             guard let self else { return }
             do {
@@ -65,10 +72,41 @@ final class AutoClickerEngine {
                 try await AutomationTiming.waitForShortcutRelease()
                 try Task.checkCancellation()
                 try prepare()
-                self.state = control.isPaused ? .paused : .running
+                self.state = control.isPaused ? .paused : (self.usesImageCondition ? .waitingForImage : .running)
+                var remainingInterval = 0
+                var appearanceStartedAt: Duration?
                 while true {
                     try await control.waitIfPaused()
                     try safety()
+                    if let imageCondition {
+                        let matches = try await imageCondition()
+                        try Task.checkCancellation()
+                        // A match captured before a manual pause must never be used after resume.
+                        if control.isPaused { try await control.waitIfPaused(); continue }
+                        try safety()
+                        if !matches {
+                            appearanceStartedAt = nil
+                            remainingInterval = 0
+                            if self.state != .waitingForImage { self.state = .waitingForImage }
+                            try await control.sleep(ms: 200)
+                            continue
+                        }
+                        if appearanceStartedAt == nil { appearanceStartedAt = control.elapsedActiveTime }
+                        let elapsed = control.elapsedActiveTime - (appearanceStartedAt ?? control.elapsedActiveTime)
+                        let remainingDelay = Duration.milliseconds(imageAppearanceDelayMS) - elapsed
+                        if remainingDelay > .zero {
+                            if self.state != .waitingForImageDelay { self.state = .waitingForImageDelay }
+                            try await control.sleep(for: min(remainingDelay, .milliseconds(200)))
+                            continue
+                        }
+                        if self.state != .running { self.state = .running }
+                        if remainingInterval > 0 {
+                            let slice = min(remainingInterval, 200)
+                            try await control.sleep(ms: slice)
+                            remainingInterval -= slice
+                            continue
+                        }
+                    }
                     if shouldClick() {
                         if let fixedPosition {
                             guard let pid = targetPID() else { throw AutoKeyError.message("The fixed click target is unavailable.") }
@@ -76,7 +114,8 @@ final class AutoClickerEngine {
                         } else { try self.emitter.click() }
                     }
                     // Sleep from the last click. Never catch up in bursts after a stall.
-                    try await control.sleep(ms: intervalMS)
+                    if imageCondition != nil { remainingInterval = intervalMS }
+                    else { try await control.sleep(ms: intervalMS) }
                 }
             } catch {
                 if self.generation == token {
@@ -87,13 +126,13 @@ final class AutoClickerEngine {
         }
     }
     func pause() {
-        guard state == .running else { return }
+        guard state == .running || state == .waitingForImage || state == .waitingForImageDelay else { return }
         control?.pause()
         state = .paused
     }
     func resume() {
         guard state == .paused else { return }
-        state = .running
+        state = usesImageCondition ? .waitingForImage : .running
         control?.resume()
     }
     func stop() {

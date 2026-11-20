@@ -7,13 +7,21 @@ final class RunControl {
     private var waiter: CheckedContinuation<Void, Never>?
     private var sleeper: Task<Void, any Error>?
     private var interruptedAt: ContinuousClock.Instant?
+    private let startedAt = ContinuousClock.now
+    private var pausedAt: ContinuousClock.Instant?
+    private var pausedDuration = Duration.zero
+
+    var elapsedActiveTime: Duration { startedAt.duration(to: pausedAt ?? .now) - pausedDuration }
 
     func pause() {
         guard !isPaused else { return }
+        pausedAt = .now
         isPaused = true
         if sleeper != nil { interruptedAt = .now; sleeper?.cancel() }
     }
     func resume() {
+        if let pausedAt { pausedDuration += pausedAt.duration(to: .now) }
+        pausedAt = nil
         isPaused = false
         let pending = waiter
         waiter = nil
@@ -31,7 +39,10 @@ final class RunControl {
         try Task.checkCancellation()
     }
     func sleep(ms: Int) async throws {
-        var remaining = Duration.milliseconds(ms)
+        try await sleep(for: .milliseconds(ms))
+    }
+    func sleep(for duration: Duration) async throws {
+        var remaining = duration
         while remaining > .zero {
             try await waitIfPaused()
             let started = ContinuousClock.now

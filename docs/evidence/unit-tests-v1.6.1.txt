@@ -1,0 +1,149 @@
+[0/1] Planning build
+Building for production...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/4] Compiling MacAutoKeyTests ImageConditionTests.swift
+[4/6] Compiling MacAutoKeyPackageTests runner.swift
+[4/6] Write Objects.LinkFileList
+[5/6] Linking MacAutoKeyPackageTests
+Build complete! (4.61s)
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite AutomationTests started.
+◇ Suite PauseResumeTests started.
+◇ Suite FixedPositionEngineTests started.
+◇ Suite ConfigurationTests started.
+◇ Suite FixedPositionConfigurationTests started.
+◇ Suite ImageConditionEngineTests started.
+◇ Suite MultipleCommandTests started.
+◇ Suite ScreenCropTests started.
+◇ Suite NativeEventTests started.
+◇ Suite WorkspaceNotificationTests started.
+◇ Suite NumericDraftTests started.
+◇ Suite ImageConditionTests started.
+◇ Suite CommandRecoveryTests started.
+◇ Test pickingNeverStartsInputAndCanBeCancelled() started.
+◇ Test invalidCoordinateDraftBlocksRunAndDisablingModeRecovers() started.
+◇ Test missingFixedTargetFailsWithoutAnyClick() started.
+◇ Test physicalMappingAndUnicodeValidation() started.
+◇ Test fixedCoordinatesSurvivePauseResumeAndStop() started.
+◇ Test oldSettingsMigrateWithoutLosingSequenceOrShortcut() started.
+◇ Test duplicateAndDeleteKeepIndependentActionsAndDrafts() started.
+◇ Test olderSettingsDefaultToPointerModeWithoutLosingCommands() started.
+◇ Test rejectedSavePreservesPreviousConfiguration() started.
+◇ Test rejectsReservedShortcut() started.
+◇ Test capturedPNGPreservesLogicalScreenSize() started.
+◇ Test validatesBoundsDuplicatesAndSelfTriggering() started.
+◇ Test rejectsTinyAndOffscreenSelections() started.
+◇ Test convertsRetinaSelectionsAndClampsToDisplay() started.
+◇ Test clickerSuspendsAndResumesWithoutDuplicateTasks() started.
+◇ Test watchesForDisappearanceDuringLongClickIntervals() started.
+◇ Test missingImageWaitsAndReappearanceResumesWithoutOverridingManualPause() started.
+◇ Test fixedPositionPersistsAndSupportsNegativeScreenCoordinates() started.
+◇ Test persistenceRoundTrip() started.
+◇ Test captureFailureStopsWithoutInput() started.
+◇ Test allDraftsMustBeValidAndRemovedActionsClearErrors() started.
+◇ Test sampleSequenceOrderAndDelays() started.
+◇ Test pointerClicksCannotActivateTheMenuBar() started.
+◇ Test catchesCrossCommandDuplicatesAndGeneratedHotkeys() started.
+◇ Test invalidDraftPreservedAndNeverSavedOrRun() started.
+◇ Test resumeDiscardsAMatchCapturedBeforePause() started.
+◇ Suite SessionSafetyTests started.
+◇ Test mousePairsUseCurrentPositionWithoutMovement() started.
+◇ Test stopDuringCaptureCannotEmitLateClick() started.
+◇ Test keyPairsAndShiftAreReleased() started.
+◇ Test unicodeContainsUTF16AndEnterUsesPhysicalKey() started.
+◇ Test unavailableFixedTargetNeverFallsBackToThePointer() started.
+◇ Test settingsPersistAndOldFilesKeepConditionOff() started.
+◇ Test multipleCommandsPersistAndRouteByID() started.
+◇ Test rejectsUnreadableAndBlankReferences() started.
+◇ Test fixedClicksUseOnlyTheBoundProcessAndWindow() started.
+◇ Test supportsCommonScreenshotScalesAndScreenEdges() started.
+◇ Test undoChoosesUnusedShortcutIfOldShortcutWasReassigned() started.
+◇ Test undoRestoresDeletedCommandAndItsPosition() started.
+◇ Test findsTranslatedCroppedImageAndRejectsItsDisappearance() started.
+◇ Test displayWakeDoesNotUnlockInactiveSession() started.
+✔ Test rejectsReservedShortcut() passed after 0.001 seconds.
+✔ Test physicalMappingAndUnicodeValidation() passed after 0.001 seconds.
+✔ Test catchesCrossCommandDuplicatesAndGeneratedHotkeys() passed after 0.001 seconds.
+✔ Test multipleCommandsPersistAndRouteByID() passed after 0.001 seconds.
+✔ Test validatesBoundsDuplicatesAndSelfTriggering() passed after 0.001 seconds.
+✔ Test olderSettingsDefaultToPointerModeWithoutLosingCommands() passed after 0.001 seconds.
+✔ Test oldSettingsMigrateWithoutLosingSequenceOrShortcut() passed after 0.001 seconds.
+✔ Test persistenceRoundTrip() passed after 0.004 seconds.
+✔ Test fixedPositionPersistsAndSupportsNegativeScreenCoordinates() passed after 0.004 seconds.
+✔ Test rejectedSavePreservesPreviousConfiguration() passed after 0.004 seconds.
+✔ Suite ConfigurationTests passed after 0.005 seconds.
+✔ Suite FixedPositionConfigurationTests passed after 0.005 seconds.
+✔ Test duplicateAndDeleteKeepIndependentActionsAndDrafts() passed after 0.072 seconds.
+✔ Suite MultipleCommandTests passed after 0.073 seconds.
+✔ Test missingFixedTargetFailsWithoutAnyClick() passed after 0.275 seconds.
+✔ Test rejectsTinyAndOffscreenSelections() passed after 0.275 seconds.
+✔ Test invalidCoordinateDraftBlocksRunAndDisablingModeRecovers() passed after 0.275 seconds.
+✔ Test capturedPNGPreservesLogicalScreenSize() passed after 0.275 seconds.
+✔ Test convertsRetinaSelectionsAndClampsToDisplay() passed after 0.275 seconds.
+✔ Suite ScreenCropTests passed after 0.275 seconds.
+✔ Test invalidDraftPreservedAndNeverSavedOrRun() passed after 0.275 seconds.
+✔ Test mousePairsUseCurrentPositionWithoutMovement() passed after 0.275 seconds.
+✔ Test pickingNeverStartsInputAndCanBeCancelled() passed after 0.275 seconds.
+✔ Test pointerClicksCannotActivateTheMenuBar() passed after 0.275 seconds.
+✔ Test captureFailureStopsWithoutInput() passed after 0.275 seconds.
+✔ Test unicodeContainsUTF16AndEnterUsesPhysicalKey() passed after 0.275 seconds.
+✔ Test allDraftsMustBeValidAndRemovedActionsClearErrors() passed after 0.275 seconds.
+✔ Test unavailableFixedTargetNeverFallsBackToThePointer() passed after 0.275 seconds.
+✔ Test settingsPersistAndOldFilesKeepConditionOff() passed after 0.275 seconds.
+✔ Test undoChoosesUnusedShortcutIfOldShortcutWasReassigned() passed after 0.275 seconds.
+✔ Test rejectsUnreadableAndBlankReferences() passed after 0.275 seconds.
+✔ Test keyPairsAndShiftAreReleased() passed after 0.275 seconds.
+✔ Test fixedClicksUseOnlyTheBoundProcessAndWindow() passed after 0.275 seconds.
+✔ Test undoRestoresDeletedCommandAndItsPosition() passed after 0.275 seconds.
+✔ Test displayWakeDoesNotUnlockInactiveSession() passed after 0.274 seconds.
+✔ Suite NumericDraftTests passed after 0.275 seconds.
+✔ Suite SessionSafetyTests passed after 0.275 seconds.
+✔ Suite CommandRecoveryTests passed after 0.275 seconds.
+✔ Suite NativeEventTests passed after 0.275 seconds.
+◇ Suite ResumeSafetyTests started.
+◇ Test stopCancelsPendingResumeWithoutClobberingNextResume() started.
+✔ Test supportsCommonScreenshotScalesAndScreenEdges() passed after 0.291 seconds.
+✔ Test findsTranslatedCroppedImageAndRejectsItsDisappearance() passed after 0.297 seconds.
+✔ Suite ImageConditionTests passed after 0.297 seconds.
+✔ Test stopCancelsPendingResumeWithoutClobberingNextResume() passed after 0.130 seconds.
+✔ Suite ResumeSafetyTests passed after 0.130 seconds.
+✔ Suite WorkspaceNotificationTests passed after 0.406 seconds.
+✔ Test stopDuringCaptureCannotEmitLateClick() passed after 0.486 seconds.
+✔ Test clickerSuspendsAndResumesWithoutDuplicateTasks() passed after 0.541 seconds.
+◇ Test keyboardContinuesAtExactCharacterAfterPause() started.
+✔ Test resumeDiscardsAMatchCapturedBeforePause() passed after 0.550 seconds.
+✔ Test fixedCoordinatesSurvivePauseResumeAndStop() passed after 0.592 seconds.
+✔ Suite FixedPositionEngineTests passed after 0.592 seconds.
+✔ Test watchesForDisappearanceDuringLongClickIntervals() passed after 0.680 seconds.
+✔ Test missingImageWaitsAndReappearanceResumesWithoutOverridingManualPause() passed after 0.878 seconds.
+✔ Suite ImageConditionEngineTests passed after 0.878 seconds.
+✔ Test keyboardContinuesAtExactCharacterAfterPause() passed after 0.500 seconds.
+◇ Test pauseFreezesRemainingExplicitDelay() started.
+✔ Test pauseFreezesRemainingExplicitDelay() passed after 0.645 seconds.
+◇ Test stopWakesPausedTaskAndCannotOverwriteRestart() started.
+✔ Test sampleSequenceOrderAndDelays() passed after 1.728 seconds.
+◇ Test clickerIntervalDuplicateStartAndStop() started.
+✔ Test stopWakesPausedTaskAndCannotOverwriteRestart() passed after 0.181 seconds.
+✔ Suite PauseResumeTests passed after 1.870 seconds.
+✔ Test clickerIntervalDuplicateStartAndStop() passed after 0.296 seconds.
+◇ Test cancellationDuringLongDelay() started.
+✔ Test cancellationDuringLongDelay() passed after 0.088 seconds.
+◇ Test cancellationDuringTypingAndOverlapPrevention() started.
+✔ Test cancellationDuringTypingAndOverlapPrevention() passed after 0.274 seconds.
+◇ Test cancellationDuringArmingProducesNoInput() started.
+✔ Test cancellationDuringArmingProducesNoInput() passed after 0.052 seconds.
+◇ Test rapidStopRestartDoesNotOverwriteNewRun() started.
+✔ Test rapidStopRestartDoesNotOverwriteNewRun() passed after 0.104 seconds.
+◇ Test failedFocusGateStopsBeforeNextEvent() started.
+✔ Test failedFocusGateStopsBeforeNextEvent() passed after 0.133 seconds.
+◇ Test focusGateCheckedPerCharacter() started.
+✔ Test focusGateCheckedPerCharacter() passed after 0.158 seconds.
+◇ Test emitterFailureIsReported() started.
+✔ Test emitterFailureIsReported() passed after 0.050 seconds.
+◇ Test unicodeEmitsEachCharacterAndPreservesOrder() started.
+✔ Test unicodeEmitsEachCharacterAndPreservesOrder() passed after 0.157 seconds.
+✔ Suite AutomationTests passed after 3.048 seconds.
+✔ Test run with 53 tests in 15 suites passed after 3.048 seconds.

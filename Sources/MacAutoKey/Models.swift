@@ -72,6 +72,7 @@ struct Configuration: Codable, Equatable, Sendable {
     var fixedClickEnabled = false
     var fixedClickX = 0
     var fixedClickY = 0
+    var imageCondition = ImageConditionSettings()
     var citrixOnly = false
     var allowedTargets: [TargetApplication] = []
     var commands = [KeyboardCommand.sample]
@@ -81,6 +82,7 @@ struct Configuration: Codable, Equatable, Sendable {
         case version, clickerEnabled, keyboardEnabled, clickIntervalMS, clickShortcut, citrixOnly, allowedTargets, commands
         case sequenceShortcut, keystrokeDelayMS, textMode, actions
         case fixedClickEnabled, fixedClickX, fixedClickY
+        case imageCondition
     }
     init(from decoder: any Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -95,6 +97,7 @@ struct Configuration: Codable, Equatable, Sendable {
         fixedClickEnabled = try values.decodeIfPresent(Bool.self, forKey: .fixedClickEnabled) ?? false
         fixedClickX = try values.decodeIfPresent(Int.self, forKey: .fixedClickX) ?? 0
         fixedClickY = try values.decodeIfPresent(Int.self, forKey: .fixedClickY) ?? 0
+        imageCondition = try values.decodeIfPresent(ImageConditionSettings.self, forKey: .imageCondition) ?? ImageConditionSettings()
         citrixOnly = try values.decode(Bool.self, forKey: .citrixOnly)
         allowedTargets = try values.decode([TargetApplication].self, forKey: .allowedTargets)
         if storedVersion == 1 {
@@ -116,6 +119,7 @@ struct Configuration: Codable, Equatable, Sendable {
         try values.encode(fixedClickEnabled, forKey: .fixedClickEnabled)
         try values.encode(fixedClickX, forKey: .fixedClickX)
         try values.encode(fixedClickY, forKey: .fixedClickY)
+        try values.encode(imageCondition, forKey: .imageCondition)
         try values.encode(citrixOnly, forKey: .citrixOnly)
         try values.encode(allowedTargets, forKey: .allowedTargets)
         try values.encode(commands, forKey: .commands)
@@ -149,6 +153,10 @@ struct Configuration: Codable, Equatable, Sendable {
 
     func validate() throws {
         guard version == 2 else { throw AutoKeyError.message("This settings version is not supported.") }
+        guard (0...60_000).contains(imageCondition.appearanceDelayMS), imageCondition.minimumSimilarity.isFinite, (0.80...0.99).contains(imageCondition.minimumSimilarity),
+              imageCondition.reference.map({ $0.png.count <= 5_000_000 && $0.widthPoints.isFinite && $0.heightPoints.isFinite && (8...4000).contains($0.widthPoints) && (8...4000).contains($0.heightPoints) }) ?? true else {
+            throw AutoKeyError.message("Invalid image condition. Choose a new reference image and a similarity from 80% to 99%.")
+        }
         guard (30...60_000).contains(clickIntervalMS) else {
             throw AutoKeyError.message("Click interval must be 30–60,000 milliseconds.")
         }
@@ -234,10 +242,11 @@ enum AutoKeyError: LocalizedError {
 }
 
 enum NumericField: Hashable {
-    case clickInterval, fixedClickX, fixedClickY, keystrokeDelay, commandDelay(UUID), actionDelay(UUID)
+    case clickInterval, imageAppearanceDelay, fixedClickX, fixedClickY, keystrokeDelay, commandDelay(UUID), actionDelay(UUID)
     var label: String {
         switch self {
         case .clickInterval: "Click interval in milliseconds"
+        case .imageAppearanceDelay: "Delay after image appears in milliseconds"
         case .fixedClickX: "Click X coordinate"
         case .fixedClickY: "Click Y coordinate"
         case .keystrokeDelay, .commandDelay: "Inter-keystroke delay in milliseconds"
@@ -247,6 +256,7 @@ enum NumericField: Hashable {
     var range: ClosedRange<Int> {
         switch self {
         case .clickInterval: 30...60_000
+        case .imageAppearanceDelay: 0...60_000
         case .fixedClickX, .fixedClickY: -100_000...100_000
         case .keystrokeDelay, .commandDelay: 20...2_000
         case .actionDelay: 0...600_000
