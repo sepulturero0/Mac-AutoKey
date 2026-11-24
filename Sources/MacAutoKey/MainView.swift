@@ -258,7 +258,7 @@ private struct ImageConditionView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Toggle("Image condition", isOn: $model.config.imageCondition.enabled)
                     .toggleStyle(.switch).font(.headline)
-                Text("Only click while a reference image is visible in the focused target window.")
+                Text("Only click while the reference image matches.")
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if model.config.imageCondition.enabled {
                     HStack(alignment: .center, spacing: 14) {
@@ -282,7 +282,15 @@ private struct ImageConditionView: View {
                             .disabled(model.referenceCapturePending)
                         Spacer()
                     }
-                    Text("Capture Area hides this window so you can drag a crop directly on any screen. Release to save the reference; Esc cancels. Keep the same appearance and zoom.")
+                    if model.config.imageCondition.reference?.screenArea != nil {
+                        Picker("Scan Area", selection: $model.config.imageCondition.scanArea) {
+                            ForEach(ImageScanArea.allCases, id: \.self) { area in
+                                Text(area.title).tag(area)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    Text(imageSearchDescription)
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     HStack {
                         Text("Similarity")
@@ -323,10 +331,23 @@ private struct ImageConditionView: View {
                         Text("Latest similarity: \(score.formatted(.percent.precision(.fractionLength(0)))) · \(model.clicker.state.statusTitle)")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("Checks up to 5 times per second while active. No screenshots are saved or uploaded. Screen Recording may require reopening the app after approval.")
+                    Text("Checks up to 5 times per second while active. Matching happens on this Mac. Screen Recording may require reopening the app after approval.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var imageSearchDescription: String {
+        guard let reference = model.config.imageCondition.reference else {
+            return "Use Capture Area to save a reference and choose where to look for it."
+        }
+        guard reference.screenArea != nil else {
+            return "This reference searches the target window. Use Capture Area to choose a scan area."
+        }
+        return switch model.config.imageCondition.scanArea {
+        case .capturedArea: "Searches only inside the rectangle you captured."
+        case .entireDisplay: "Looks for the reference anywhere on the monitor where you captured it."
         }
     }
 }

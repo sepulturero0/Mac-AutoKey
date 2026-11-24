@@ -46,6 +46,7 @@ final class AutoClickerEngine {
     var onChange: (() -> Void)?
     private var task: Task<Void, Never>?
     private var generation = UUID()
+    private var pauseGeneration = UUID()
     private var control: RunControl?
     private(set) var usesImageCondition = false
     var isImageConditionRun: Bool { usesImageCondition && state.isActive }
@@ -75,14 +76,16 @@ final class AutoClickerEngine {
                 self.state = control.isPaused ? .paused : (self.usesImageCondition ? .waitingForImage : .running)
                 var remainingInterval = 0
                 var appearanceStartedAt: Duration?
+                let appearanceDelay = Duration.milliseconds(imageAppearanceDelayMS)
                 while true {
                     try await control.waitIfPaused()
                     try safety()
                     if let imageCondition {
+                        let pauseToken = self.pauseGeneration
                         let matches = try await imageCondition()
                         try Task.checkCancellation()
-                        // A match captured before a manual pause must never be used after resume.
-                        if control.isPaused { try await control.waitIfPaused(); continue }
+                        // Discard the frame even if Pause and Resume both happened during capture.
+                        if self.pauseGeneration != pauseToken { continue }
                         try safety()
                         if !matches {
                             appearanceStartedAt = nil
@@ -93,7 +96,7 @@ final class AutoClickerEngine {
                         }
                         if appearanceStartedAt == nil { appearanceStartedAt = control.elapsedActiveTime }
                         let elapsed = control.elapsedActiveTime - (appearanceStartedAt ?? control.elapsedActiveTime)
-                        let remainingDelay = Duration.milliseconds(imageAppearanceDelayMS) - elapsed
+                        let remainingDelay = appearanceDelay - elapsed
                         if remainingDelay > .zero {
                             if self.state != .waitingForImageDelay { self.state = .waitingForImageDelay }
                             try await control.sleep(for: min(remainingDelay, .milliseconds(200)))
@@ -127,6 +130,7 @@ final class AutoClickerEngine {
     }
     func pause() {
         guard state == .running || state == .waitingForImage || state == .waitingForImageDelay else { return }
+        pauseGeneration = UUID()
         control?.pause()
         state = .paused
     }

@@ -3,13 +3,14 @@ import Testing
 @testable import MacAutoKey
 
 @MainActor
-private func patternImage(width: Int = 64, height: Int = 48) throws -> CGImage {
+private func patternImage(width: Int = 64, height: Int = 48, addedMark: CGRect? = nil) throws -> CGImage {
     let context = try #require(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
         bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
     context.setFillColor(CGColor(red: 0.1, green: 0.6, blue: 0.9, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     context.setFillColor(CGColor(red: 0.95, green: 0.25, blue: 0.1, alpha: 1)); context.fill(CGRect(x: width / 7, y: height / 6, width: width / 4, height: height * 2 / 3))
     context.setFillColor(CGColor(gray: 0.95, alpha: 1)); context.fillEllipse(in: CGRect(x: width / 2, y: height / 4, width: width / 3, height: height / 2))
     context.setFillColor(CGColor(gray: 0.05, alpha: 1)); context.fill(CGRect(x: width / 2, y: height / 3, width: width / 7, height: height / 5))
+    if let addedMark { context.fill(addedMark) }
     return try #require(context.makeImage())
 }
 
@@ -35,6 +36,25 @@ struct ScreenCropTests {
         let reference = try ImageReference.load(data: data, name: "Captured area")
         #expect(abs(reference.widthPoints - 64) < 0.1)
         #expect(abs(reference.heightPoints - 48) < 0.1)
+    }
+
+    @Test func savedAreaRequiresTheEntireRectangleToFitOnItsDisplay() {
+        let area = ReferenceScreenArea(displayUUID: UUID(), rect: CGRect(x: 760, y: 580, width: 40, height: 20))
+        #expect(area.fits(in: CGSize(width: 800, height: 600)))
+        #expect(!area.fits(in: CGSize(width: 799, height: 600)))
+        #expect(!area.fits(in: CGSize(width: 800, height: 599)))
+    }
+
+    @Test func scanAreaSelectsEitherTheSavedCropOrTheWholeDisplay() {
+        let size = CGSize(width: 800, height: 600)
+        let crop = CGRect(x: 760, y: 580, width: 40, height: 20)
+        let area = ReferenceScreenArea(displayUUID: UUID(), rect: crop)
+        #expect(ImageScanArea.capturedArea.sourceRect(for: area, displaySize: size) == crop)
+        #expect(ImageScanArea.entireDisplay.sourceRect(for: area, displaySize: size) == CGRect(origin: .zero, size: size))
+
+        let smallerDisplay = CGSize(width: 700, height: 500)
+        #expect(ImageScanArea.capturedArea.sourceRect(for: area, displaySize: smallerDisplay) == nil)
+        #expect(ImageScanArea.entireDisplay.sourceRect(for: area, displaySize: smallerDisplay) == CGRect(origin: .zero, size: smallerDisplay))
     }
 }
 
@@ -68,6 +88,50 @@ struct ImageConditionTests {
         #expect(doubled >= 0.92)
         let edge = try await matcher.similarity(frame: frame(template, x: 256, y: 192), widthPoints: 320, reference: reference)
         #expect(edge >= 0.92)
+    }
+    @Test func movingAnImageOutsideTheCropOnlyMatchesInTheWiderSearch() async throws {
+        let template = try patternImage()
+        let reference = try reference(template)
+        let matcher = ImageMatcher()
+        let rect = CGRect(x: 101, y: 240 - 87 - 48, width: 64, height: 48)
+        let present = try #require(frame(template).cropping(to: rect))
+        let movedFrame = try frame(template, x: 200)
+        let moved = try #require(movedFrame.cropping(to: rect))
+        #expect(try await matcher.fixedAreaSimilarity(frame: present, reference: reference) >= 0.92)
+        #expect(try await matcher.fixedAreaSimilarity(frame: moved, reference: reference) < 0.80)
+        #expect(try await matcher.similarity(frame: movedFrame, widthPoints: 320, reference: reference) >= 0.92)
+    }
+
+    @Test func fixedAreaRejectsLocalizedChangesAndWrongFrameSize() async throws {
+        let template = try patternImage()
+        let marked = try patternImage(addedMark: CGRect(x: 57, y: 8, width: 5, height: 5))
+        let matcher = ImageMatcher()
+        let original = try reference(template)
+        let markedReference = try reference(marked)
+
+        #expect(try await matcher.fixedAreaSimilarity(frame: template, reference: original) >= 0.99)
+        #expect(try await matcher.fixedAreaSimilarity(frame: marked, reference: original) < 0.80)
+        #expect(try await matcher.fixedAreaSimilarity(frame: template, reference: markedReference) < 0.80)
+        #expect(try await matcher.fixedAreaSimilarity(frame: frame(template), reference: original) == 0)
+    }
+
+    @Test func savedCropPersistsAndLegacyReferenceLoadsWithoutCoordinates() throws {
+        let original = try reference(patternImage())
+        let legacy = try JSONEncoder().encode(original)
+        #expect(try JSONDecoder().decode(ImageReference.self, from: legacy).screenArea == nil)
+
+        var captured = original
+        captured.screenArea = ReferenceScreenArea(displayUUID: UUID(), rect: CGRect(x: 90, y: 55, width: 64, height: 48))
+        var configuration = Configuration()
+        configuration.imageCondition = .init(enabled: true, reference: captured, scanArea: .entireDisplay)
+        let saved = try JSONEncoder().encode(configuration)
+        #expect(try JSONDecoder().decode(Configuration.self, from: saved).imageCondition == configuration.imageCondition)
+    }
+
+    @Test func earlierSettingsDefaultToTheCapturedArea() throws {
+        let earlier = Data(#"{"enabled":true,"minimumSimilarity":0.92,"appearanceDelayMS":300}"#.utf8)
+        let settings = try JSONDecoder().decode(ImageConditionSettings.self, from: earlier)
+        #expect(settings.scanArea == .capturedArea)
     }
     @Test func rejectsUnreadableAndBlankReferences() throws {
         #expect(throws: (any Error).self) { try ImageReference.load(data: Data("not an image".utf8), name: "Bad") }
@@ -108,6 +172,7 @@ struct ImageConditionEngineTests {
         }
         try #require(predicate(), "Engine did not reach its expected state within two seconds")
     }
+
     @Test func appearanceDelayAppliesOnceThenUsesClickInterval() async throws {
         let emitter = ConditionTestEmitter()
         let engine = AutoClickerEngine(emitter: emitter)
@@ -185,7 +250,8 @@ struct ImageConditionEngineTests {
         try await waitUntil { engine.state == .running && emitter.clicks == 2 }
         #expect(engine.state == .running && emitter.clicks == 2)
     }
-    @Test func resumeDiscardsAMatchCapturedBeforePause() async throws {
+    @Test(arguments: [true, false])
+    func resumeDiscardsAMatchCapturedBeforePause(waitForCaptureToFinish: Bool) async throws {
         let emitter = ConditionTestEmitter()
         let engine = AutoClickerEngine(emitter: emitter)
         defer { engine.stop() }
@@ -198,7 +264,7 @@ struct ImageConditionEngineTests {
         try await Task.sleep(for: .milliseconds(25))
         engine.pause()
         visible = false
-        try await Task.sleep(for: .milliseconds(100))
+        if waitForCaptureToFinish { try await Task.sleep(for: .milliseconds(100)) }
         engine.resume()
         try await Task.sleep(for: .milliseconds(140))
         #expect(engine.state == .waitingForImage && emitter.clicks == 0)

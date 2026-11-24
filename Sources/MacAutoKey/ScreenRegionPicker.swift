@@ -34,11 +34,12 @@ final class ScreenRegionPicker {
                 NSApp.hide(nil)
                 try await Task.sleep(for: .milliseconds(300))
                 let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
-                var snapshots: [(NSRect, CGImage)] = []
+                var snapshots: [(frame: NSRect, image: CGImage, displayUUID: UUID)] = []
                 for screen in NSScreen.screens {
                     try Task.checkCancellation()
                     guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
-                          let display = content.displays.first(where: { $0.displayID == number.uint32Value }) else { continue }
+                          let display = content.displays.first(where: { $0.displayID == number.uint32Value }),
+                          let displayUUID = ReferenceScreenArea.identity(for: display.displayID) else { continue }
                     let config = SCStreamConfiguration()
                     let scale = min(screen.backingScaleFactor, 4096 / max(screen.frame.width, screen.frame.height))
                     config.width = max(1, Int(screen.frame.width * scale))
@@ -46,7 +47,7 @@ final class ScreenRegionPicker {
                     config.showsCursor = false
                     config.capturesAudio = false
                     let frame = try await SCScreenshotManager.captureImage(contentFilter: SCContentFilter(display: display, excludingWindows: []), configuration: config)
-                    snapshots.append((screen.frame, frame))
+                    snapshots.append((screen.frame, frame, displayUUID))
                 }
                 try Task.checkCancellation()
                 guard let self else { return }
@@ -54,7 +55,7 @@ final class ScreenRegionPicker {
                 NSApp.unhide(nil)
                 // Keep other app windows hidden until selection is complete.
                 for window in NSApp.windows where window.title == "Mac AutoKey" || window.title == "Settings" { window.orderOut(nil) }
-                for (frame, image) in snapshots {
+                for (frame, image, displayUUID) in snapshots {
                     let panel = CropPanel(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
                     panel.title = "Capture reference area"
                     panel.level = .screenSaver
@@ -81,6 +82,7 @@ final class ScreenRegionPicker {
                             var reference = try ImageReference.load(data: data, name: "Captured screen area")
                             reference.widthPoints = selected.width
                             reference.heightPoints = selected.height
+                            reference.screenArea = ReferenceScreenArea(displayUUID: displayUUID, rect: selected)
                             self.finish(.success(reference))
                         } catch { self.finish(.failure(error)) }
                     }

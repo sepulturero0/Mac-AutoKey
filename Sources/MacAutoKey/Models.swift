@@ -157,6 +157,9 @@ struct Configuration: Codable, Equatable, Sendable {
               imageCondition.reference.map({ $0.png.count <= 5_000_000 && $0.widthPoints.isFinite && $0.heightPoints.isFinite && (8...4000).contains($0.widthPoints) && (8...4000).contains($0.heightPoints) }) ?? true else {
             throw AutoKeyError.message("Invalid image condition. Choose a new reference image and a similarity from 80% to 99%.")
         }
+        if let area = imageCondition.reference?.screenArea, !area.isValid {
+            throw AutoKeyError.message("Invalid reference screen area. Use Capture Area to select it again.")
+        }
         guard (30...60_000).contains(clickIntervalMS) else {
             throw AutoKeyError.message("Click interval must be 30–60,000 milliseconds.")
         }
